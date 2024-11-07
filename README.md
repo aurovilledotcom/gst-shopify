@@ -2,6 +2,8 @@
 
 The `gst-shopify` repository contains tools for managing GST compliance for Shopify stores, including updating Harmonized System of Nomenclature (HSN) codes for inventory items. 
 
+> **Note**: This project was developed in collaboration with o1-mini and GPT-4o, using [LLM Context](https://github.com/cyberchitta/llm-context.py). All code in the repository is human-curated (by me 😇, [@restlessronin](https://github.com/restlessronin)).
+
 ## Features
 
 - **HSN Code Update**: Batch processing for updating HSN codes in Shopify inventory.
