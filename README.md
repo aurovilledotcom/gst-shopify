@@ -73,3 +73,7 @@ This script performs the following steps:
 #### Error Handling and Retries
 
 The script includes retry logic to handle temporary connection issues and Shopify API rate limits. Errors are printed to the console for review.
+
+## License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
