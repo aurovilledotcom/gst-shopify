@@ -88,10 +88,8 @@ def process_inventory_items():
         for variant in product_variants:
             sku = variant["node"]["sku"]
             current_hsn_code = variant["node"]["inventoryItem"]["harmonizedSystemCode"]
-            if (
-                sku not in sku_hsn_map
-                or not current_hsn_code
-                or current_hsn_code != sku_hsn_map[sku]
+            if sku in sku_hsn_map and (
+                not current_hsn_code or current_hsn_code != sku_hsn_map[sku]
             ):
                 inventory_item_id = variant["node"]["inventoryItem"]["id"]
                 hsn_code = sku_hsn_map[sku]
