@@ -109,11 +109,13 @@ def save_unique_hsn_codes_to_csv(output_file="unique_hsn_codes.csv"):
     unique_hsn_df.to_csv(output_file, index=False)
     print(f"Unique HSN codes saved to {output_file}")
 
+
 def save_variants_to_csv(output_file="bad_variants.csv"):
     invalid_hsn_codes = list_invalid_hsn_codes()
     invalid_hsn_df = pd.DataFrame(invalid_hsn_codes, columns=["sku", "hsn_code"])
     invalid_hsn_df.to_csv(output_file, index=False)
     print(f"Invalid HSN codes saved to {output_file}")
+
 
 if __name__ == "__main__":
     #    save_unique_hsn_codes_to_csv()
