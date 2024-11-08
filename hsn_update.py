@@ -7,7 +7,7 @@ from shopify_api import graphql_request
 QUERY_BATCH_SIZE = 250  # Larger batch size for queries
 UPDATE_BATCH_SIZE = 3  # Smaller batch size for updates
 
-data = pd.read_csv("hsn-codes.csv")  # CSV with columns: SKU, HSN_Code
+data = pd.read_csv("hsn-codes.csv", dtype={"hsncode": "string"})
 sku_hsn_map = dict(zip(data["sku"], data["hsncode"]))
 
 
