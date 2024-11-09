@@ -164,8 +164,20 @@ def create_e_invoice_lut(order_id):
     save_invoice_to_json(invoice_data, order_id)
 
 
-def main():
-    create_e_invoice_lut("6049844625651")
+def main(input_file="order_ids.txt"):
+    try:
+        with open(input_file, "r") as file:
+            order_ids = [line.strip() for line in file if line.strip()]
+
+        for order_id in order_ids:
+            print(f"Processing order ID: {order_id}")
+            create_e_invoice_lut(order_id)
+        print("All invoices generated successfully.")
+
+    except FileNotFoundError:
+        print(f"Input file '{input_file}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
