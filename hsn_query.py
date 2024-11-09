@@ -118,5 +118,5 @@ def save_variants_to_csv(output_file="bad_variants.csv"):
 
 
 if __name__ == "__main__":
-    #    save_unique_hsn_codes_to_csv()
+    save_unique_hsn_codes_to_csv()
     save_variants_to_csv()
