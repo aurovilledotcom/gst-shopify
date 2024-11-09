@@ -2,7 +2,7 @@ import time
 
 import pandas as pd
 
-from shopify_api import graphql_request
+from api_client import graphql_request
 
 QUERY_BATCH_SIZE = 250  # Larger batch size for queries
 UPDATE_BATCH_SIZE = 3  # Smaller batch size for updates
