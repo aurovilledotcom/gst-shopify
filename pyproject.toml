@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gst-shopify"
 version = "0.0.1"
-description = ""
+description = "Tools for Indian GST invoicing and HSN code management with Shopify integration."
 authors = ["restlessronin <88921269+restlessronin@users.noreply.github.com>"]
 license = "Apache-2.0"
 
@@ -9,6 +9,7 @@ license = "Apache-2.0"
 python = "^3.12"
 pandas = "^2.2.3"
 requests = "^2.32.3"
+python-dateutil = "^2.9.0.post0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
