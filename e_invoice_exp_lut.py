@@ -11,54 +11,60 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query {
-        order(id: "{order_id}") {
+    # Convert order_id to Shopify's global ID format
+    gid_order_id = f"gid://shopify/Order/{order_id}"
+
+    query = f"""
+    query {{
+        order(id: "{gid_order_id}") {{
             id
             name
             createdAt
-            customer {
+            customer {{
                 firstName
                 lastName
-            }
-            shippingAddress {
+            }}
+            shippingAddress {{
                 address1
                 address2
                 city
-            }
-            lineItems(first: 100) {
-                edges {
-                    node {
+            }}
+            lineItems(first: 100) {{
+                edges {{
+                    node {{
                         title
                         quantity
-                        price
-                        variant {
-                            inventoryItem {
+                        priceSet {{
+                            shopMoney {{
+                                amount
+                            }}
+                        }}
+                        variant {{
+                            inventoryItem {{
                                 id
                                 harmonizedSystemCode
-                            }
-                        }
-                    }
-                }
-            }
-            totalShippingPriceSet {
-                shopMoney {
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+            totalShippingPriceSet {{
+                shopMoney {{
                     amount
-                }
-            }
-        }
-    }
+                }}
+            }}
+        }}
+    }}
     """
 
     result = graphql_request(query)
     order_data = result["data"]["order"]
 
-    # Apply some transformation to match the structure needed by the current code
-    order_data["id"] = order_data["id"].split("/")[
-        -1
-    ]  # Extracting the ID from the Shopify ID format
+    # Transform the data to match existing structure
+    order_data["id"] = order_id  # Use the original ID for consistency
     order_data["line_items"] = [
-        item["node"] for item in order_data["lineItems"]["edges"]
+        {**item["node"], "price": item["node"]["priceSet"]["shopMoney"]["amount"]}
+        for item in order_data["lineItems"]["edges"]
     ]
     return order_data
 
