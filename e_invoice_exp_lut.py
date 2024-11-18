@@ -14,42 +14,42 @@ def get_graphql_id(resource_type, resource_id):
 def get_shopify_order(order_id):
     order_gid = get_graphql_id("Order", order_id)
     query = f"""
-    query {{
-      order(id: "{order_gid}") {{
-        name
-        createdAt
-        totalShippingPriceSet {{
-          shopMoney {{
-            amount
-          }}
-        }}
-        customer {{
-          firstName
-          lastName
-        }}
-        shippingAddress {{
-          address1
-          address2
-          city
-        }}
-        lineItems(first: 100) {{
-          edges {{
-            node {{
-              title
-              quantity
-              price
-              barcode
-              variant {{
-                inventoryItem {{
-                  harmonizedSystemCode
-                }}
-              }}
+query {{
+  order(id: "{order_gid}") {{
+    name
+    createdAt
+    totalShippingPriceSet {{
+      shopMoney {{
+        amount
+      }}
+    }}
+    customer {{
+      firstName
+      lastName
+    }}
+    shippingAddress {{
+      address1
+      address2
+      city
+    }}
+    lineItems(first: 100) {{
+      edges {{
+        node {{
+          title
+          quantity
+          variant {{
+            price
+            sku
+            inventoryItem {{
+              harmonizedSystemCode
             }}
           }}
         }}
       }}
     }}
-    """
+  }}
+}}
+"""
     response_data = graphql_request(query)
     if "data" in response_data and "order" in response_data["data"]:
         return response_data["data"]["order"]
