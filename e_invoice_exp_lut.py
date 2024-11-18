@@ -12,7 +12,7 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 def get_shopify_order(order_id):
     # Convert numerical order ID to Shopify's Global ID format
     global_order_id = f"gid://shopify/Order/{order_id}"
-
+    
     query = f"""
     {{
       order(id: "{global_order_id}") {{
@@ -37,12 +37,13 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              discountedTotalPrice {{
+              originalTotalPrice {{
                 amount
               }}
               sku
               variant {{
                 id
+                sku
                 inventoryItem {{
                   id
                   harmonizedSystemCode
@@ -120,7 +121,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("discountedTotalPrice", {}).get("amount", "0.00"))
+        unit_price = Decimal(item.get("originalTotalPrice", {}).get("amount", "0.00")) / quantity
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -130,11 +131,11 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("sku", ""),
+                "Barcde": item.get("sku", ""),  # Using SKU as barcode alternative
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
-                "UnitPrice": unit_price,
+                "UnitPrice": unit_price.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP),
                 "TotAmt": total_amount,
                 "Discount": Decimal("0.00"),
                 "PreTaxVal": total_amount,
