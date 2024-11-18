@@ -14,42 +14,46 @@ def get_graphql_id(resource_type, resource_id):
 def get_shopify_order(order_id):
     order_gid = get_graphql_id("Order", order_id)
     query = f"""
-query {{
-  order(id: "{order_gid}") {{
-    name
-    createdAt
-    totalShippingPriceSet {{
-      shopMoney {{
-        amount
-      }}
-    }}
-    customer {{
-      firstName
-      lastName
-    }}
-    shippingAddress {{
-      address1
-      address2
-      city
-    }}
-    lineItems(first: 100) {{
-      edges {{
-        node {{
-          title
-          quantity
-          variant {{
-            price
-            sku
-            inventoryItem {{
-              harmonizedSystemCode
+    query {{
+      order(id: "{order_gid}") {{
+        name
+        createdAt
+        totalShippingPriceSet {{
+          shopMoney {{
+            amount
+          }}
+        }}
+        customer {{
+          firstName
+          lastName
+        }}
+        shippingAddress {{
+          address1
+          address2
+          city
+        }}
+        lineItems(first: 100) {{
+          edges {{
+            node {{
+              title
+              quantity
+              originalUnitPriceSet {{
+                shopMoney {{
+                  amount
+                }}
+              }}
+              variant {{
+                barcode
+                inventoryItem {{
+                  harmonizedSystemCode
+                }}
+              }}
             }}
           }}
         }}
       }}
     }}
-  }}
-}}
-"""
+    """
     response_data = graphql_request(query)
     if "data" in response_data and "order" in response_data["data"]:
         return response_data["data"]["order"]
@@ -111,7 +115,11 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     for idx, edge in enumerate(line_items):
         item = edge["node"]
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        unit_price = Decimal(
+            item.get("originalUnitPriceSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0.00")
+        )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -120,6 +128,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             .get("inventoryItem", {})
             .get("harmonizedSystemCode", "00000000")
         )
+        barcode = item.get("variant", {}).get("barcode", "")
 
         invoice_data["ItemList"].append(
             {
@@ -127,7 +136,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": barcode,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
