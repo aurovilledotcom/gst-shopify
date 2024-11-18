@@ -76,19 +76,19 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "DocDtls": {
             "Typ": "INV",
             "No": str(shopify_order["name"]),
-            "Dt": parser.parse(shopify_order["created_at"]).strftime("%d/%m/%Y"),
+            "Dt": parser.parse(shopify_order["createdAt"]).strftime("%d/%m/%Y"),
         },
         "SellerDtls": seller_details,
         "BuyerDtls": {
             "Gstin": "URP",
-            "LglNm": shopify_order.get("customer", {}).get("first_name", "")
+            "LglNm": shopify_order.get("customer", {}).get("firstName", "")
             + " "
-            + shopify_order.get("customer", {}).get("last_name", ""),
+            + shopify_order.get("customer", {}).get("lastName", ""),
             "Pos": "96",
-            "Addr1": shopify_order.get("shipping_address", {}).get("address1", ""),
-            "Addr2": shopify_order.get("shipping_address", {}).get("address2", ""),
-            "Loc": shopify_order.get("shipping_address", {}).get("city", ""),
-            "Pin": "999999",
+            "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
+            "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
+            "Loc": shopify_order.get("shippingAddress", {}).get("city", ""),
+            "Pin": shopify_order.get("shippingAddress", {}).get("zip", "999999"),
             "Stcd": "96",
             "Ph": None,
             "Em": None,
