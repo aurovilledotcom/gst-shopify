@@ -2,44 +2,54 @@ import json
 import os
 from decimal import ROUND_HALF_UP, Decimal
 
-import requests
 from dateutil import parser
+
+from api_client import graphql_request
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/orders/{order_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["order"]
-
-
-def get_inventory_item_id(variant_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/variants/{variant_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["variant"].get("inventory_item_id")
-
-
-def get_hsn_code(inventory_item_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/inventory_items/{inventory_item_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["inventory_item"].get("harmonized_system_code", "00000000")
+    query = f"""
+    query {{
+      order(id: "gid://shopify/Order/{order_id}") {{
+        name
+        createdAt
+        customer {{
+          firstName
+          lastName
+        }}
+        shippingAddress {{
+          address1
+          address2
+          city
+        }}
+        totalShippingPriceSet {{
+          shopMoney {{
+            amount
+          }}
+        }}
+        lineItems(first: 10) {{
+          edges {{
+            node {{
+              title
+              quantity
+              price
+              barcode
+              variant {{
+                inventoryItem {{
+                  harmonizedSystemCode
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+    response = graphql_request(query)
+    return response["data"]["order"]
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
@@ -92,10 +102,13 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["line_items"]):
-        variant_id = item.get("variant_id")
-        inventory_item_id = get_inventory_item_id(variant_id) if variant_id else None
-        hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
+    for idx, item_edge in enumerate(shopify_order["lineItems"]["edges"]):
+        item = item_edge["node"]
+        hsn_code = (
+            item.get("variant", {})
+            .get("inventoryItem", {})
+            .get("harmonizedSystemCode", "00000000")
+        )
 
         quantity = Decimal(item.get("quantity", 1))
         unit_price = Decimal(item.get("price", "0.00"))
