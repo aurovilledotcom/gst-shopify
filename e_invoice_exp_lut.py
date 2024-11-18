@@ -126,7 +126,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item["node"]["title"],
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": variant["sku"],
+                "Barcde": "",
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
