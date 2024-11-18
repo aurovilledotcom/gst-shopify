@@ -16,6 +16,11 @@ def get_shopify_order(order_id):
         order(id: "gid://shopify/Order/{order_id}") {{
             name
             createdAt
+            totalShippingPriceSet {{
+                shopMoney {{
+                    amount
+                }}
+            }}
             lineItems(first: 250) {{
                 edges {{
                     node {{
