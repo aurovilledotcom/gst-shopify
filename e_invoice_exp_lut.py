@@ -10,9 +10,12 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 
 
 def get_shopify_order(order_id):
+    # Convert numerical order ID to Shopify's Global ID format
+    global_order_id = f"gid://shopify/Order/{order_id}"
+
     query = f"""
     {{
-      order(id: "gid://shopify/Order/{order_id}") {{
+      order(id: "{global_order_id}") {{
         name
         createdAt
         totalShippingPriceSet {{
@@ -34,8 +37,10 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              price
-              barcode
+              discountedTotalPrice {{
+                amount
+              }}
+              sku
               variant {{
                 id
                 inventoryItem {{
@@ -50,6 +55,10 @@ def get_shopify_order(order_id):
     }}
     """
     response = graphql_request(query)
+    if "errors" in response:
+        print(f"GraphQL errors: {response['errors']}")
+        raise Exception(f"Order with ID {order_id} not found or invalid fields.")
+
     order = response.get("data", {}).get("order")
     if not order:
         raise Exception(f"Order with ID {order_id} not found.")
@@ -111,7 +120,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        unit_price = Decimal(item.get("discountedTotalPrice", {}).get("amount", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -121,7 +130,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": item.get("sku", ""),
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
