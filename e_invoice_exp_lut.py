@@ -89,7 +89,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
             "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
             "Loc": shopify_order.get("shippingAddress", {}).get("city", ""),
-            "Pin": shopify_order.get("shippingAddress", {}).get("zip", "999999"),
+            "Pin": "999999",
             "Stcd": "96",
             "Ph": None,
             "Em": None,
@@ -151,6 +151,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "StateCesNonAdvlAmt": Decimal("0.00"),
                 "OthChrg": Decimal("0.00"),
                 "TotItemVal": total_amount,
+                "AttribDtls": [],
             }
         )
         invoice_data["ValDtls"]["AssVal"] += total_amount
