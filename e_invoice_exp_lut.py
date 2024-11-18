@@ -2,44 +2,54 @@ import json
 import os
 from decimal import ROUND_HALF_UP, Decimal
 
-import requests
 from dateutil import parser
+
+from api_client import graphql_request
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
 
 
-def get_shopify_order(order_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/orders/{order_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["order"]
-
-
-def get_inventory_item_id(variant_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/variants/{variant_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["variant"].get("inventory_item_id")
-
-
-def get_hsn_code(inventory_item_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/inventory_items/{inventory_item_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["inventory_item"].get("harmonized_system_code", "00000000")
+def get_shopify_order(order_id, max_retries=5):
+    query = f"""
+    query {{
+      order(id: "{order_id}") {{
+        name
+        createdAt
+        totalShippingPriceSet {{
+          shopMoney {{
+            amount
+          }}
+        }}
+        customer {{
+          firstName
+          lastName
+        }}
+        shippingAddress {{
+          address1
+          address2
+          city
+        }}
+        lineItems(first: 250) {{
+          edges {{
+            node {{
+              id
+              variant {{
+                id
+                inventoryItemId
+              }}
+              title
+              price
+              quantity
+              barcode
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+    response = graphql_request(query, max_retries=max_retries)
+    return response["data"]["order"]
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
