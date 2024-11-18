@@ -64,16 +64,6 @@ def get_shopify_order(order_id):
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
-    """
-    Generates GST invoice data.
-
-    Args:
-    shopify_order (dict): Shopify order data.
-    seller_details (dict): Seller details.
-
-    Returns:
-    dict: GST invoice data.
-    """
     shipping_amount = Decimal(
         shopify_order.get("totalShippingPriceSet", {})
         .get("shopMoney", {})
@@ -91,14 +81,14 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "DocDtls": {
             "Typ": "INV",
             "No": str(shopify_order["name"]),
-            "Dt": parser.parse(shopify_order["created_at"]).strftime("%d/%m/%Y"),
+            "Dt": parser.parse(shopify_order.get("createdAt", "")).strftime("%d/%m/%Y"),
         },
         "SellerDtls": seller_details,
         "BuyerDtls": {
             "Gstin": "URP",
-            "LglNm": shopify_order.get("customer", {}).get("first_name", "")
+            "LglNm": shopify_order.get("customer", {}).get("firstName", "")
             + " "
-            + shopify_order.get("customer", {}).get("last_name", ""),
+            + shopify_order.get("customer", {}).get("lastName", ""),
             "Pos": "96",
             "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
             "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
@@ -169,7 +159,6 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
         "TotInvVal"
     ].quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
-
     return invoice_data
 
 
