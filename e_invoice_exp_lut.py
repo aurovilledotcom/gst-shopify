@@ -2,7 +2,7 @@ import json
 import os
 from decimal import ROUND_HALF_UP, Decimal
 
-import requests
+from api_client import graphql_request
 from dateutil import parser
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
@@ -11,52 +11,51 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 def get_shopify_order(order_id):
     query = """
-    {
-      order(id: "gid://shopify/Order/{}") {
+    {{
+      order(id: "gid://shopify/Order/{order_id}") {{
         id
         name
         createdAt
-        lineItems(first: 250) {
-          edges {
-            node {
+        lineItems(first: 250) {{
+          edges {{
+            node {{
               variantId
               title
               quantity
-              priceSet {
-                shopMoney {
+              priceSet {{
+                shopMoney {{
                   amount
-                }
-              }
-              variant {
-                inventoryItem {
+                }}
+              }}
+              variant {{
+                inventoryItem {{
                   id
                   harmonizedSystemCode
-                }
-              }
-            }
-          }
-        }
-        totalShippingPriceSet {
-          shopMoney {
+                }}
+              }}
+            }}
+          }}
+        }}
+        totalShippingPriceSet {{
+          shopMoney {{
             amount
-          }
-        }
-        customer {
+          }}
+        }}
+        customer {{
           firstName
           lastName
-        }
-        shippingAddress {
+        }}
+        shippingAddress {{
           address1
           address2
           city
           zip
-        }
-      }
-    }
-    """.format(
-        order_id
+        }}
+      }}
+    }}""".format(
+        order_id=order_id
     )
-    response = api_client.graphql_request(query)
+    response = graphql_request(query)
     return response["data"]["order"]
 
 
