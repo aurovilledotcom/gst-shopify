@@ -33,7 +33,11 @@ def get_shopify_order(order_id):
               id
               title
               quantity
-              price
+              originalUnitPriceSet {
+                shopMoney {
+                  amount
+                }
+              }
               variant {
                 inventoryItem {
                   harmonizedSystemCode
@@ -112,7 +116,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
 
         quantity = Decimal(item["node"]["quantity"])
-        unit_price = Decimal(item["node"]["price"])
+        unit_price = Decimal(
+            item["node"]["originalUnitPriceSet"]["shopMoney"]["amount"]
+        )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
