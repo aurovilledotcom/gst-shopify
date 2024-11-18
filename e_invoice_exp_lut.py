@@ -63,7 +63,8 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         shopify_order.get("totalShippingPriceSet", {})
         .get("shopMoney", {})
         .get("amount", "0.00")
-    )
+    ).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+
     invoice_data = {
         "Version": "1.1",
         "TranDtls": {
@@ -110,23 +111,26 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
     for idx, edge in enumerate(shopify_order["lineItems"]["edges"]):
         node = edge["node"]
+        quantity = Decimal(node["quantity"])
+        unit_price = Decimal(node["variant"]["price"]).quantize(
+            Decimal("0.00"), rounding=ROUND_HALF_UP
+        )
+        total_amount = (unit_price * quantity).quantize(
+            Decimal("0.00"), rounding=ROUND_HALF_UP
+        )
         hsn_code = (
             node["variant"]["inventoryItem"]["harmonizedSystemCode"]
             if node["variant"]["inventoryItem"]
             else "00000000"
         )
-        quantity = Decimal(node["quantity"])
-        unit_price = Decimal(node["variant"]["price"])
-        total_amount = (unit_price * quantity).quantize(
-            Decimal("0.00"), rounding=ROUND_HALF_UP
-        )
+
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(idx + 1),
-                "PrdDesc": item.get("title", ""),
+                "PrdDesc": node["title"],
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": None,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
@@ -146,10 +150,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "StateCesAmt": Decimal("0.00"),
                 "StateCesNonAdvlAmt": Decimal("0.00"),
                 "OthChrg": Decimal("0.00"),
-                "TotItemVal": total_amount.quantize(
-                    Decimal("0.00"), rounding=ROUND_HALF_UP
-                ),
-                "AttribDtls": [],
+                "TotItemVal": total_amount,
             }
         )
         invoice_data["ValDtls"]["AssVal"] += total_amount
