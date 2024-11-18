@@ -10,42 +10,60 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/orders/{order_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
+    query = """
+    {
+      order(id: "gid://shopify/Order/{}") {
+        id
+        name
+        createdAt
+        lineItems(first: 250) {
+          edges {
+            node {
+              variantId
+              title
+              quantity
+              priceSet {
+                shopMoney {
+                  amount
+                }
+              }
+              variant {
+                inventoryItem {
+                  id
+                  harmonizedSystemCode
+                }
+              }
+            }
+          }
+        }
+        totalShippingPriceSet {
+          shopMoney {
+            amount
+          }
+        }
+        customer {
+          firstName
+          lastName
+        }
+        shippingAddress {
+          address1
+          address2
+          city
+          zip
+        }
+      }
     }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["order"]
-
-
-def get_inventory_item_id(variant_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/variants/{variant_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["variant"].get("inventory_item_id")
-
-
-def get_hsn_code(inventory_item_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/inventory_items/{inventory_item_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["inventory_item"].get("harmonized_system_code", "00000000")
+    """.format(
+        order_id
+    )
+    response = api_client.graphql_request(query)
+    return response["data"]["order"]
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
-        shopify_order.get("total_shipping_price_set", {})
-        .get("shop_money", {})
+        shopify_order.get("totalShippingPriceSet", {})
+        .get("shopMoney", {})
         .get("amount", "0.00")
     )
     invoice_data = {
@@ -92,13 +110,15 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["line_items"]):
-        variant_id = item.get("variant_id")
-        inventory_item_id = get_inventory_item_id(variant_id) if variant_id else None
-        hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
-
-        quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+    for idx, edge in enumerate(shopify_order["lineItems"]["edges"]):
+        node = edge["node"]
+        hsn_code = (
+            node["variant"]["inventoryItem"]["harmonizedSystemCode"]
+            if node["variant"]["inventoryItem"]
+            else "00000000"
+        )
+        quantity = Decimal(node["quantity"])
+        unit_price = Decimal(node["priceSet"]["shopMoney"]["amount"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
