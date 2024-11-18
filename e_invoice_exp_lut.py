@@ -11,7 +11,6 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    # Convert order_id to Shopify's global ID format
     gid_order_id = f"gid://shopify/Order/{order_id}"
 
     query = f"""
@@ -34,7 +33,7 @@ def get_shopify_order(order_id):
                     node {{
                         title
                         quantity
-                        priceSet {{
+                        originalUnitPriceSet {{
                             shopMoney {{
                                 amount
                             }}
@@ -63,7 +62,10 @@ def get_shopify_order(order_id):
     # Transform the data to match existing structure
     order_data["id"] = order_id  # Use the original ID for consistency
     order_data["line_items"] = [
-        {**item["node"], "price": item["node"]["priceSet"]["shopMoney"]["amount"]}
+        {
+            **item["node"],
+            "price": item["node"]["originalUnitPriceSet"]["shopMoney"]["amount"],
+        }
         for item in order_data["lineItems"]["edges"]
     ]
     return order_data
