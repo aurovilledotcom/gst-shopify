@@ -27,9 +27,7 @@ def get_shopify_order(order_id):
                                 id
                                 harmonizedSystemCode
                             }}
-                            priceV2 {{
-                                amount
-                            }}
+                            price
                         }}
                     }}
                 }}
@@ -112,7 +110,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(line_item.get("quantity", 1))
-        unit_price = Decimal(variant.get("priceV2", {}).get("amount", "0.00"))
+        unit_price = Decimal(variant.get("price", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
