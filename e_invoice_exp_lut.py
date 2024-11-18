@@ -54,8 +54,8 @@ def get_shopify_order(order_id):
 
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
-        shopify_order.get("total_shipping_price_set", {})
-        .get("shop_money", {})
+        shopify_order.get("totalShippingPriceSet", {})
+        .get("shopMoney", {})
         .get("amount", "0.00")
     )
     invoice_data = {
