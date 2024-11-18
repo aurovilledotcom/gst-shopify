@@ -19,15 +19,11 @@ def get_shopify_order(order_id):
         lineItems(first: 250) {{
           edges {{
             node {{
-              variantId
               title
               quantity
-              priceSet {{
-                shopMoney {{
-                  amount
-                }}
-              }}
               variant {{
+                id
+                price
                 inventoryItem {{
                   id
                   harmonizedSystemCode
@@ -56,6 +52,9 @@ def get_shopify_order(order_id):
         order_id=order_id
     )
     response = graphql_request(query)
+    if "errors" in response:
+        error_messages = "\n".join([error["message"] for error in response["errors"]])
+        raise Exception(f"GraphQL errors: {error_messages}")
     return response["data"]["order"]
 
 
@@ -117,7 +116,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             else "00000000"
         )
         quantity = Decimal(node["quantity"])
-        unit_price = Decimal(node["priceSet"]["shopMoney"]["amount"])
+        unit_price = Decimal(node["variant"]["price"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
