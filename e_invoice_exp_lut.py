@@ -48,16 +48,18 @@ def get_shopify_order(order_id, max_retries=5):
       }}
     }}
     """
+
     response = graphql_request(query, max_retries=max_retries)
     return response["data"]["order"]
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
-        shopify_order.get("total_shipping_price_set", {})
-        .get("shop_money", {})
+        shopify_order.get("totalShippingPriceSet", {})
+        .get("shopMoney", {})
         .get("amount", "0.00")
     )
+
     invoice_data = {
         "Version": "1.1",
         "TranDtls": {
@@ -75,13 +77,13 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "SellerDtls": seller_details,
         "BuyerDtls": {
             "Gstin": "URP",
-            "LglNm": shopify_order.get("customer", {}).get("first_name", "")
+            "LglNm": shopify_order.get("customer", {}).get("firstName", "")
             + " "
-            + shopify_order.get("customer", {}).get("last_name", ""),
+            + shopify_order.get("customer", {}).get("lastName", ""),
             "Pos": "96",
-            "Addr1": shopify_order.get("shipping_address", {}).get("address1", ""),
-            "Addr2": shopify_order.get("shipping_address", {}).get("address2", ""),
-            "Loc": shopify_order.get("shipping_address", {}).get("city", ""),
+            "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
+            "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
+            "Loc": shopify_order.get("shippingAddress", {}).get("city", ""),
             "Pin": "999999",
             "Stcd": "96",
             "Ph": None,
@@ -102,16 +104,18 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["line_items"]):
-        variant_id = item.get("variant_id")
-        inventory_item_id = get_inventory_item_id(variant_id) if variant_id else None
-        hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
+    for idx, item_edge in enumerate(shopify_order["lineItems"]["edges"]):
+        item = item_edge["node"]
+        variant = item["variant"]
+        inventory_item = variant.get("inventoryItem")
+        hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(item.get("quantity", 1))
         unit_price = Decimal(item.get("price", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
+
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(idx + 1),
