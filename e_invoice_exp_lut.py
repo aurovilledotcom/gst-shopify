@@ -10,9 +10,10 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query getOrder($id: ID!) {
-      order(id: $id) {
+    query = (
+        """
+    {
+      order(id: "gid://shopify/Order/%s") {
         name
         createdAt
         totalShippingPriceSet {
@@ -47,9 +48,10 @@ def get_shopify_order(order_id):
       }
     }
     """
+        % order_id
+    )
 
-    variables = {"id": f"gid://shopify/Order/{order_id}"}
-    response = graphql_request(query, variables)
+    response = graphql_request(query)
 
     if response.get("errors"):
         raise Exception(f"GraphQL query failed: {response['errors']}")
