@@ -11,9 +11,12 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
+    # Convert order ID to global ID
+    global_order_id = f"gid://shopify/Order/{order_id}"
+
     graphql_query = f"""
     query {{
-      order(id: "{order_id}") {{
+      order(id: "{global_order_id}") {{
         id
         name
         createdAt
@@ -34,20 +37,17 @@ def get_shopify_order(order_id):
               quantity
               variant {{
                 id
-                inventoryItemId
+                inventoryItem {{
+                  id
+                  harmonizedSystemCode
+                }}
                 barcode
               }}
-              price {{
-                amount
+              originalUnitPriceSet {{
+                shopMoney {{
+                  amount
+                }}
               }}
-            }}
-          }}
-        }}
-        inventoryItems(first: 100) {{
-          edges {{
-            node {{
-              id
-              harmonizedSystemCode
             }}
           }}
         }}
@@ -62,8 +62,8 @@ def get_shopify_order(order_id):
 
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
-        shopify_order.get("total_shipping_price_set", {})
-        .get("shop_money", {})
+        shopify_order.get("totalShippingPriceSet", {})
+        .get("shopMoney", {})
         .get("amount", "0.00")
     )
     invoice_data = {
@@ -108,19 +108,14 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    inventory_items = {
-        item["node"]["id"]: item["node"]["harmonizedSystemCode"]
-        for item in shopify_order["inventoryItems"]["edges"]
-    }
-
     for idx, edge in enumerate(shopify_order["lineItems"]["edges"]):
         item = edge["node"]
         variant = item["variant"]
-        inventory_item_id = variant["inventoryItemId"]
-        hsn_code = inventory_items.get(inventory_item_id, "00000000")
+        inventory_item = variant["inventoryItem"]
+        hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(item["quantity"])
-        unit_price = Decimal(item["price"]["amount"])
+        unit_price = Decimal(item["originalUnitPriceSet"]["shopMoney"]["amount"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
