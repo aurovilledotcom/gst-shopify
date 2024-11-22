@@ -10,63 +10,54 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
 
 
-# Define the GraphQL query to fetch all necessary data
-graphql_query = """
-query($orderId: ID!) {
-  order(id: $orderId) {
-    id
-    name
-    createdAt
-    customer {
-      firstName
-      lastName
-    }
-    shippingAddress {
-      address1
-      address2
-      city
-    }
-    lineItems(first: 100) {
-      edges {
-        node {
-          id
-          title
-          quantity
-          variant {
-            id
-            inventoryItemId
-            barcode
-          }
-          price {
-            amount
-          }
-        }
-      }
-    }
-    inventoryItems(first: 100) {
-      edges {
-        node {
-          id
-          harmonizedSystemCode
-        }
-      }
-    }
-  }
-}
-"""
-
-
 def get_shopify_order(order_id):
-    variables = {"orderId": order_id}
-    response = graphql_request({"query": graphql_query, "variables": variables})
+    graphql_query = f"""
+    query {{
+      order(id: "{order_id}") {{
+        id
+        name
+        createdAt
+        customer {{
+          firstName
+          lastName
+        }}
+        shippingAddress {{
+          address1
+          address2
+          city
+        }}
+        lineItems(first: 100) {{
+          edges {{
+            node {{
+              id
+              title
+              quantity
+              variant {{
+                id
+                inventoryItemId
+                barcode
+              }}
+              price {{
+                amount
+              }}
+            }}
+          }}
+        }}
+        inventoryItems(first: 100) {{
+          edges {{
+            node {{
+              id
+              harmonizedSystemCode
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+    response = graphql_request(graphql_query, max_retries=5)
     if "errors" in response:
         raise Exception(f"GraphQL errors: {response['errors']}")
     return response["data"]["order"]
-
-
-from decimal import ROUND_HALF_UP, Decimal
-
-from dateutil import parser
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
