@@ -20,6 +20,11 @@ def get_shopify_order(order_id):
         id
         name
         createdAt
+        totalShippingPriceSet {{
+          shopMoney {{
+            amount
+          }}
+        }}
         customer {{
           firstName
           lastName
