@@ -43,8 +43,9 @@ def get_shopify_order(order_id):
         }
     }
     """
-    variables = {"orderId": f"gid://shopify/Order/{order_id}"}
-    response_data = graphql_request(query, variables)
+    # Replace the variable in the query with the actual order ID
+    query = query.replace("$orderId", f"gid://shopify/Order/{order_id}")
+    response_data = graphql_request(query, max_retries=5)
 
     if "errors" in response_data:
         raise Exception(f"GraphQL errors: {response_data['errors']}")
@@ -54,9 +55,6 @@ def get_shopify_order(order_id):
         raise ValueError(f"No order found for ID: {order_id}")
 
     return order
-
-
-# /gst-shopify/e_invoice_exp_lut.py
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
