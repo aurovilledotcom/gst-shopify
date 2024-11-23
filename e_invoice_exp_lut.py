@@ -16,11 +16,6 @@ def get_shopify_order(order_id):
         order(id: "gid://shopify/Order/{order_id}") {{
             name
             createdAt
-            totalShippingPriceSet {{
-                shopMoney {{
-                    amount
-                }}
-            }}
             customer {{
                 firstName
                 lastName
@@ -30,14 +25,23 @@ def get_shopify_order(order_id):
                 address2
                 city
             }}
-            lineItems {{
-                title
-                quantity
-                price
-                variantId
-                variant {{
-                    inventoryItemId
-                    harmonizedSystemCode
+            totalShippingPriceSet {{
+                shopMoney {{
+                    amount
+                }}
+            }}
+            lineItems(first: 100) {{
+                edges {{
+                    node {{
+                        title
+                        quantity
+                        price
+                        variant {{
+                            id
+                            inventoryItemId
+                            harmonizedSystemCode
+                        }}
+                    }}
                 }}
             }}
         }}
@@ -105,8 +109,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["lineItems"]):
-        hsn_code = item["variant"]["harmonizedSystemCode"] or "00000000"
+    for idx, edge in enumerate(shopify_order["lineItems"]["edges"]):
+        item = edge["node"]
+        variant = item.get("variant", {})
+        hsn_code = variant.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(item.get("quantity", 1))
         unit_price = Decimal(item.get("price", "0.00"))
