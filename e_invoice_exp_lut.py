@@ -11,40 +11,38 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query GetOrder($orderId: ID!) {
-        order(id: $orderId) {
+    query = f"""
+    query {{
+        order(id: "gid://shopify/Order/{order_id}") {{
             name
             createdAt
-            totalShippingPriceSet {
-                shopMoney {
+            totalShippingPriceSet {{
+                shopMoney {{
                     amount
-                }
-            }
-            customer {
+                }}
+            }}
+            customer {{
                 firstName
                 lastName
-            }
-            shippingAddress {
+            }}
+            shippingAddress {{
                 address1
                 address2
                 city
-            }
-            lineItems {
+            }}
+            lineItems {{
                 title
                 quantity
                 price
                 variantId
-                variant {
+                variant {{
                     inventoryItemId
                     harmonizedSystemCode
-                }
-            }
-        }
-    }
+                }}
+            }}
+        }}
+    }}
     """
-    # Replace the variable in the query with the actual order ID
-    query = query.replace("$orderId", f"gid://shopify/Order/{order_id}")
     response_data = graphql_request(query, max_retries=5)
 
     if "errors" in response_data:
