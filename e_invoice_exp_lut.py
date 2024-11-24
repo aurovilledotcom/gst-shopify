@@ -11,11 +11,11 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    """Fetches order details, line items, inventory item IDs, and HSN codes in a single GraphQL query."""
+    """Fetches order details, line items, and variant SKUs in a single GraphQL query."""
     query = (
         """
-        query OrderWithLineItemsAndHSN {
-            order(id: "%s") {
+        query OrderWithLineItemsAndVariants {
+            order(id: "gid://shopify/Order/%s") {
                 id
                 name
                 createdAt
@@ -37,16 +37,17 @@ def get_shopify_order(order_id):
                     edges {
                         node {
                             id
-                            variantId
-                            quantity
-                            price
-                            title
                             variant {
-                                inventoryItemId
-                                inventoryItem {
-                                    harmonizedSystemCode
+                                id
+                                sku
+                                priceV2 {
+                                    amount
+                                }
+                                product {
+                                    title
                                 }
                             }
+                            quantity
                         }
                     }
                 }
@@ -54,8 +55,11 @@ def get_shopify_order(order_id):
         }
     """
         % order_id
-    )  # Inline the order_id into the query
+    )
     response_data = graphql_request(query, max_retries=5)
+    if "errors" in response_data:
+        print("GraphQL errors:", response_data["errors"])
+        raise Exception("GraphQL query failed")
     return response_data["data"]["order"]
 
 
@@ -112,25 +116,21 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
     for item in shopify_order["lineItems"]["edges"]:
         node = item["node"]
-        hsn_code = (
-            node.get("variant", {})
-            .get("inventoryItem", {})
-            .get("harmonizedSystemCode", "00000000")
-        )
+        variant = node["variant"]
+        hsn_code = "00000000"  # Temp placeholder; adjust according to your needs
         quantity = Decimal(node.get("quantity", 1))
-        unit_price = Decimal(node.get("price", "0.00"))
+        unit_price = Decimal(variant.get("priceV2", {}).get("amount", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(len(invoice_data["ItemList"]) + 1),
-                "PrdDesc": node.get("title", ""),
+                "PrdDesc": variant.get("product", {}).get("title", ""),
                 "IsServc": "N",
-                "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "HsnCd": hsn_code,  # Update once you have the actual HSN code retrieval logic
+                "Barcde": variant.get("sku", ""),  # Using SKU as a fallback for barcode
                 "Qty": quantity,
-                "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
                 "UnitPrice": unit_price,
                 "TotAmt": total_amount,
