@@ -40,14 +40,14 @@ def get_shopify_order(order_id):
                             variant {
                                 id
                                 sku
-                                priceV2 {
-                                    amount
-                                }
                                 product {
                                     title
                                 }
                             }
                             quantity
+                            price {
+                                amount
+                            }
                         }
                     }
                 }
@@ -119,7 +119,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         variant = node["variant"]
         hsn_code = "00000000"  # Temp placeholder; adjust according to your needs
         quantity = Decimal(node.get("quantity", 1))
-        unit_price = Decimal(variant.get("priceV2", {}).get("amount", "0.00"))
+        unit_price = Decimal(node.get("price", {}).get("amount", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
