@@ -12,9 +12,10 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 def get_shopify_order(order_id):
     """Fetches order details, line items, inventory item IDs, and HSN codes in a single GraphQL query."""
-    query = """
-        query OrderWithLineItemsAndHSN($orderId: ID!) {
-            order(id: $orderId) {
+    query = (
+        """
+        query OrderWithLineItemsAndHSN {
+            order(id: "%s") {
                 id
                 name
                 createdAt
@@ -52,8 +53,9 @@ def get_shopify_order(order_id):
             }
         }
     """
-    variables = {"orderId": order_id}
-    response_data = graphql_request(query, variables=variables)
+        % order_id
+    )  # Inline the order_id into the query
+    response_data = graphql_request(query, max_retries=5)
     return response_data["data"]["order"]
 
 
