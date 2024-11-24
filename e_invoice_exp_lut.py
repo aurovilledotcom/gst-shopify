@@ -84,7 +84,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "DocDtls": {
             "Typ": "INV",
             "No": str(shopify_order["name"]),
-            "Dt": parser.parse(shopify_order["created_at"]).strftime("%d/%m/%Y"),
+            "Dt": parser.parse(shopify_order["createdAt"]).strftime("%d/%m/%Y"),
         },
         "SellerDtls": seller_details,
         "BuyerDtls": {
