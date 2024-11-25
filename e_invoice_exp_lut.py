@@ -12,49 +12,45 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 def get_shopify_order(order_id):
     query = f"""
-      query {{
+    query {{
         order(id: "gid://shopify/Order/{order_id}") {{
-          name
-          createdAt
-          totalShippingPriceSet {{
-            shopMoney {{
-              amount
+            name
+            createdAt
+            totalShippingPriceSet {{
+              shopMoney {{
+                amount
+              }}
             }}
-          }}
-          customer {{
-            firstName
-            lastName
-          }}
-          shippingAddress {{
-            address1
-            address2
-            city
-          }}
-          lineItems(first: 250) {{
-            edges {{
-              node {{
-                title
-                quantity
-                variant {{
+            customer {{
+              firstName
+              lastName
+            }}
+            shippingAddress {{
+              address1
+              address2
+              city
+            }}
+            lineItems(first: 250) {{
+              edges {{
+                node {{
+                  title
+                  quantity
+                  variant {{
                     barcode
-                    product {{
-                        harmonizedSystemCode
+                    inventoryItem {{
+                      harmonizedSystemCode
                     }}
-                  inventoryItem {{
-                    id
+                  }}
+                  originalUnitPriceSet {{
+                    shopMoney {{
+                      amount
+                    }}
                   }}
                 }}
-                amountSet {{
-                    shopMoney {{
-                        amount
-                      }}
-                    }}
-
               }}
             }}
           }}
         }}
-      }}
     """
     response = graphql_request(query)
     if "data" in response and response["data"]:
@@ -119,13 +115,15 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         item = item_edge["node"]
         hsn_code = (
             item.get("variant", {})
-            .get("product", {})
+            .get("inventoryItem", {})
             .get("harmonizedSystemCode", "00000000")
         )
 
         quantity = Decimal(item.get("quantity", 1))
         unit_price = Decimal(
-            item.get("amountSet", {}).get("shopMoney", {}).get("amount", "0.00")
+            item.get("originalUnitPriceSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0.00")
         )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
