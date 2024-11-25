@@ -37,12 +37,14 @@ def get_shopify_order(order_id):
                         id
                         title
                         quantity
-                        unitPrice {{
-                            amount
+                        originalTotalPriceSet {{
+                            shopMoney {{
+                                amount
+                            }}
                         }}
-                        barcode
                         variant {{
                             id
+                            barcode
                             inventoryItem {{
                                 id
                                 harmonizedSystemCode
@@ -110,8 +112,8 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
     for idx, edge in enumerate(shopify_order["lineItems"]["edges"]):
         item = edge["node"]
-        variant_id = item.get("variant").get("id")
-        inventory_item = item.get("variant").get("inventoryItem")
+        variant = item.get("variant", {})
+        inventory_item = variant.get("inventoryItem", {})
         inventory_item_id = inventory_item.get("id") if inventory_item else None
         hsn_code = (
             inventory_item.get("harmonizedSystemCode", "00000000")
@@ -120,7 +122,14 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
 
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("unitPrice", {}).get("amount", "0.00"))
+        original_total_price = Decimal(
+            item.get("originalTotalPriceSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0.00")
+        )
+        unit_price = (
+            original_total_price / quantity if quantity > 0 else Decimal("0.00")
+        )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -130,7 +139,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": variant.get("barcode", ""),
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
