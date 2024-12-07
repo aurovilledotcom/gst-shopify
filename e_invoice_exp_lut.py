@@ -11,9 +11,10 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query getOrderDetails($order_id: ID!) {
-        order(id: $order_id) {
+    query = (
+        """
+    query {
+        order(id: "%s") {
             id
             name
             createdAt
@@ -54,10 +55,10 @@ def get_shopify_order(order_id):
         }
     }
     """
+        % order_id
+    )
 
-    variables = {"order_id": order_id}
-
-    response = graphql_request(query, variables=variables)
+    response = graphql_request(query, max_retries=5)
     if "errors" in response:
         raise Exception(f"GraphQL errors: {response['errors']}")
     return response["data"]["order"]
