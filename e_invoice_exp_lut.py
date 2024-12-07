@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil import parser
@@ -52,7 +51,7 @@ def get_shopify_order(order_id):
                         }}
                         title
                         quantity
-                        price
+                        originalUnitPrice
                     }}
                 }}
             }}
@@ -121,7 +120,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
 
         quantity = Decimal(node["quantity"])
-        unit_price = Decimal(node["price"])
+        unit_price = Decimal(node["originalUnitPrice"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
