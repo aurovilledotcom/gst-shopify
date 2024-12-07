@@ -1,5 +1,7 @@
+import base64
 import json
 import os
+import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil import parser
@@ -10,53 +12,53 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
 
 
+def encode_shopify_id(id):
+    return base64.b64encode(id.encode()).decode()
+
+
 def get_shopify_order(order_id):
-    query = (
-        """
-    query {
-        order(id: "%s") {
+    shopify_order_id = encode_shopify_id(f"gid://shopify/Order/{order_id}")
+
+    query = f"""
+    query {{
+        order(id: "{shopify_order_id}") {{
             id
             name
             createdAt
-            customer {
+            customer {{
                 firstName
                 lastName
-            }
-            shippingAddress {
+            }}
+            shippingAddress {{
                 address1
                 address2
                 city
-            }
-            totalShippingPriceSet {
-                shopMoney {
+            }}
+            totalShippingPriceSet {{
+                shopMoney {{
                     amount
-                }
-            }
-            lineItems(first: 250) {
-                edges {
-                    node {
+                }}
+            }}
+            lineItems(first: 250) {{
+                edges {{
+                    node {{
                         id
-                        variant {
+                        variant {{
                             id
-                            inventoryItem {
+                            inventoryItem {{
                                 id
                                 hsCode: harmonizedSystemCode
-                            }
-                        }
+                            }}
+                        }}
                         title
                         quantity
-                        priceV2 {
-                            amount
-                            currencyCode
-                        }
-                    }
-                }
-            }
-        }
-    }
+                        price
+                    }}
+                }}
+            }}
+        }}
+    }}
     """
-        % order_id
-    )
 
     response = graphql_request(query, max_retries=5)
     if "errors" in response:
@@ -119,7 +121,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
 
         quantity = Decimal(node["quantity"])
-        unit_price = Decimal(node["priceV2"]["amount"])
+        unit_price = Decimal(node["price"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
