@@ -16,44 +16,44 @@ def get_shopify_order(order_id):
 
     query = f"""
     query {{
-      order(id: "{shopify_order_gid}") {{
+    order(id: "{shopify_order_gid}") {{
         name
         createdAt
         totalShippingPriceSet {{
-          shopMoney {{
+        shopMoney {{
             amount
-          }}
+        }}
         }}
         customer {{
-          firstName
-          lastName
+        firstName
+        lastName
         }}
         shippingAddress {{
-          address1
-          address2
-          city
+        address1
+        address2
+        city
         }}
         lineItems(first: 250) {{
-          edges {{
+        edges {{
             node {{
-              title
-              quantity
-              variant {{
+            title
+            quantity
+            variant {{
                 id
                 barcode
                 inventoryItem {{
-                  harmonizedSystemCode
+                harmonizedSystemCode
                 }}
-              }}
-              priceSet {{
-                shopMoney {{
-                  amount
-                }}
-              }}
             }}
-          }}
+            originalUnitPriceSet {{
+                shopMoney {{
+                amount
+                }}
+            }}
+            }}
         }}
-      }}
+        }}
+    }}
     }}
     """
 
@@ -68,15 +68,13 @@ def get_shopify_order(order_id):
         inventory_item = variant.get("inventoryItem", {})
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000") or "00000000"
 
-        line_items.append(
-            {
-                "title": node.get("title", ""),
-                "quantity": node.get("quantity", 1),
-                "price": node["priceSet"]["shopMoney"]["amount"],
-                "barcode": variant.get("barcode", ""),
-                "harmonized_system_code": hsn_code,
-            }
-        )
+        line_items.append({
+            "title": node.get("title", ""),
+            "quantity": node.get("quantity", 1),
+            "price": node["originalUnitPriceSet"]["shopMoney"]["amount"],
+            "barcode": variant.get("barcode", ""),
+            "harmonized_system_code": hsn_code
+        })
 
     shopify_order = {
         "name": order_data["name"],
