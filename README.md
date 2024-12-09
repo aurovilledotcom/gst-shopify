@@ -35,6 +35,12 @@ Ensure that your Shopify app or private app is granted these permissions in the 
    uv pip install git+https://github.com/aurovilledotcom/gst-shopify.git@release
    ```
 
+2. Set up environment variables:
+   - `SHOPIFY_STORE`: Your Shopify store's domain (e.g., `yourstore.myshopify.com`)
+   - `API_TOKEN`: Access token for Shopify's Admin API with the required permissions.
+
+   These variables can be stored in a `.env` file in the root directory for convenience.
+
 ### CLI Commands
 
 The package installs a command-line tool `gst-shopify` with the following commands:
