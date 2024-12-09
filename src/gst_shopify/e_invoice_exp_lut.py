@@ -1,9 +1,12 @@
 import json
 import os
 from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
 import requests
 from dateutil import parser
+
+from gst_shopify.config import load_seller_details
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
@@ -145,26 +148,21 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     return invoice_data
 
 
-def load_seller_details(file_path="config/seller_details.json"):
-    with open(file_path, "r") as file:
-        return json.load(file)
-
-
-def save_invoice_to_json(invoice_data, order_id):
-    file_name = f"gst_export_invoice_lut_{order_id}.json"
+def save_invoice_to_json(out_dir: Path, invoice_data, order_id):
+    file_name = out_dir / f"gst_export_invoice_lut_{order_id}.json"
     with open(file_name, "w") as json_file:
         json.dump(invoice_data, json_file, indent=4, default=str)
     print(f"GST export e-invoice (LUT) saved as {file_name}")
 
 
-def create_e_invoice_lut(order_id):
+def create_e_invoice_lut(out_dir: Path, order_id):
     seller_details = load_seller_details()
     shopify_order = get_shopify_order(order_id)
     invoice_data = generate_gst_invoice_data(shopify_order, seller_details)
-    save_invoice_to_json(invoice_data, order_id)
+    save_invoice_to_json(out_dir, invoice_data, order_id)
 
 
-def main(input_file="order_ids.txt"):
+def generate_invoices(input_file: Path, out_dir: Path):
     try:
         with open(input_file, "r") as file:
             order_ids = [line.strip() for line in file if line.strip()]
@@ -178,6 +176,10 @@ def main(input_file="order_ids.txt"):
         print(f"Input file '{input_file}' not found.")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+def main(input_file: Path, out_dir: Path):
+    generate_invoices(input_file, out_dir)
 
 
 if __name__ == "__main__":

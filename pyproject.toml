@@ -1,22 +1,51 @@
-[tool.poetry]
+[project]
 name = "gst-shopify"
-version = "0.0.1"
-description = "Tools for Indian GST invoicing and HSN code management with Shopify integration."
-authors = ["restlessronin <88921269+restlessronin@users.noreply.github.com>"]
-license = "Apache-2.0"
+version = "0.1.0"
+description = "CLI tools for Indian GST invoicing and HSN code management with Shopify integration"
+authors = [
+    { name = "restlessronin", email = "88921269+restlessronin@users.noreply.github.com" },
+]
+dependencies = [
+    "pandas>=2.2.3",
+    "requests>=2.32.3",
+    "python-dateutil>=2.9.0",
+    "typer[all]>=0.9.0",
+    "rich>=13.7.0",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = { file = "LICENSE" }
 
-[tool.poetry.dependencies]
-python = "^3.12"
-pandas = "^2.2.3"
-requests = "^2.32.3"
-python-dateutil = "^2.9.0.post0"
+[project.optional-dependencies]
+dev = [
+    "black>=24.10.0",
+    "flake8>=7.1.1",
+    "isort>=5.13.2",
+    "mypy>=1.12.1",
+    "pytest>=8.0.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-black = "^24.10.0"
-flake8 = "^7.1.1"
-isort = "^5.13.2"
-mypy = "^1.12.1"
+[project.scripts]
+gst-shopify = "gst_shopify.cli:app"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gst_shopify"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

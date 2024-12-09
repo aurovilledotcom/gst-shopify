@@ -1,14 +1,12 @@
 import time
+from pathlib import Path
 
 import pandas as pd
 
-from api_client import graphql_request
+from gst_shopify.api_client import graphql_request
 
 QUERY_BATCH_SIZE = 250  # Larger batch size for queries
 UPDATE_BATCH_SIZE = 3  # Smaller batch size for updates
-
-data = pd.read_csv("hsn-codes.csv", dtype={"hsncode": "string"})
-sku_hsn_map = dict(zip(data["sku"], data["hsncode"]))
 
 
 def generate_inventory_query(first=50, after=None):
@@ -70,13 +68,18 @@ def batch_update_hsn_codes(inventory_item_ids, hsn_codes):
             graphql_request(mutation_query)
 
 
-def process_inventory_items():
+def process_inventory_items(input_file: Path, qry_batch_size: int):
+    print("Processing inventory items and updating HSN codes...")
+
+    data = pd.read_csv(input_file, dtype={"hsncode": "string"})
+    sku_hsn_map = dict(zip(data["sku"], data["hsncode"]))
+
     total_processed = 0
     has_next_page = True
     end_cursor = None
 
     while has_next_page:
-        query = generate_inventory_query(first=QUERY_BATCH_SIZE, after=end_cursor)
+        query = generate_inventory_query(first=qry_batch_size, after=end_cursor)
         response = graphql_request(query)
 
         product_variants = response["data"]["productVariants"]["edges"]
@@ -107,11 +110,11 @@ def process_inventory_items():
 
         time.sleep(2)
 
+    print("Update complete!")
+
 
 def main():
-    print("Processing inventory items and updating HSN codes...")
     process_inventory_items()
-    print("Update complete!")
 
 
 if __name__ == "__main__":

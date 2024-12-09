@@ -1,6 +1,7 @@
+from pathlib import Path
 import pandas as pd
 
-from api_client import graphql_request
+from gst_shopify.api_client import graphql_request
 
 QUERY_BATCH_SIZE = 250
 
@@ -102,7 +103,7 @@ def list_invalid_hsn_codes():
     return invalid_hsn_variants
 
 
-def save_unique_hsn_codes_to_csv(output_file="unique_hsn_codes.csv"):
+def save_unique_hsn_codes_to_csv(output_file: Path):
     """Fetch unique HSN codes and save them to a CSV file."""
     unique_hsn_codes = get_unique_hsn_codes()
     unique_hsn_df = pd.DataFrame(unique_hsn_codes, columns=["HSN_Code"])
