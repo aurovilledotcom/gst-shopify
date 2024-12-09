@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pandas as pd
 
 from gst_shopify.api_client import graphql_request

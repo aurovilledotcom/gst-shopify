@@ -149,6 +149,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
 
 def save_invoice_to_json(out_dir: Path, invoice_data, order_id):
+    out_dir.mkdir(parents=True, exist_ok=True)
     file_name = out_dir / f"gst_export_invoice_lut_{order_id}.json"
     with open(file_name, "w") as json_file:
         json.dump(invoice_data, json_file, indent=4, default=str)
@@ -169,13 +170,23 @@ def generate_invoices(input_file: Path, out_dir: Path):
 
         for order_id in order_ids:
             print(f"Processing order ID: {order_id}")
-            create_e_invoice_lut(order_id)
+            try:
+                create_e_invoice_lut(out_dir, order_id)
+            except FileNotFoundError as e:
+                print(f"Configuration error: {e}")
+                return
+            except Exception as e:
+                print(f"Error processing order {order_id}: {e}")
+                raise
         print("All invoices generated successfully.")
 
     except FileNotFoundError:
-        print(f"Input file '{input_file}' not found.")
+        print(f"Input file '{input_file}' not found at {input_file.absolute()}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
 
 
 def main(input_file: Path, out_dir: Path):
