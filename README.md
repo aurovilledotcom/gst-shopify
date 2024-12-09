@@ -15,7 +15,7 @@ The `gst-shopify` repository provides tools for managing GST compliance in Shopi
 ### Prerequisites
 
 - Python 3.12+
-- [Poetry](https://python-poetry.org/) for dependency management
+- [uv](https://github.com/astral-sh/uv) for dependency management
 - A valid Shopify Admin API access token with the required permissions.
 
 ### Required Shopify API Permissions
@@ -30,99 +30,57 @@ Ensure that your Shopify app or private app is granted these permissions in the 
 
 ### Installation
 
-1. Clone the repository:
+1. Install directly from GitHub:
    ```bash
-   git clone https://github.com/yourusername/gst-shopify.git
-   cd gst-shopify
+   uv pip install git+https://github.com/restlessronin/gst-shopify.git
    ```
 
-2. Install dependencies:
-   ```bash
-   poetry install
-   ```
+### CLI Commands
 
-3. Set up environment variables:
-   - `SHOPIFY_STORE`: Your Shopify store’s domain (e.g., `yourstore.myshopify.com`)
-   - `API_TOKEN`: Access token for Shopify's Admin API with the required permissions.
+The package installs a command-line tool `gst-shopify` with the following commands:
 
-   These variables can be stored in a `.env` file in the root directory for convenience.
-
-### Scripts Overview
-
-#### HSN Code Update (`hsn_update.py`)
-
-This script updates Shopify inventory items with HSN codes based on SKU mappings provided in a CSV file. It processes items in batches, fetching items from Shopify, checking current HSN codes, and updating them as needed.
-
-**CSV Format**
-
-The CSV file (default: `hsn-codes.csv`) should include two columns:
-
-- `SKU`: The SKU (Stock Keeping Unit) of the product variant.
-- `HSN_Code`: The HSN code to assign to that SKU.
-
-Example:
-```csv
-SKU,HSN_Code
-SKU123,1001
-SKU456,2002
-SKU789,3003
-```
-
-**Running the Script**
-
+#### Query HSN Codes
 ```bash
-poetry run python hsn_update.py
+uv run gst-shopify query-hsn [--output-file PATH]
 ```
+Generates a report of unique HSN codes in use. The report is saved to the specified output file (default: `unique_hsn_codes.csv`).
 
-This script performs the following steps:
-
-1. **Load Data**: Reads SKU-HSN mappings from a CSV file.
-2. **Fetch Inventory**: Retrieves product variants in batches.
-3. **Update HSN Codes**: Sends batch requests to update HSN codes where they are missing or incorrect.
-
-**Script Parameters**
-
-- `QUERY_BATCH_SIZE`: Number of items per GraphQL query (default: 250).
-- `UPDATE_BATCH_SIZE`: Number of HSN code updates per GraphQL mutation (default: 3).
-
-#### HSN Code Query (`hsn_query.py`)
-
-This script generates two types of reports:
-
-1. **Unique HSN Codes**: Fetches all unique HSN codes used in Shopify inventory and saves them to `unique_hsn_codes.csv`.
-2. **Invalid HSN Codes**: Lists SKUs with missing, blank, or invalid HSN codes and saves them to `bad_variants.csv`.
-
-To execute, run:
+#### Update HSN Codes
 ```bash
-poetry run python hsn_query.py
+uv run gst-shopify update-hsn [INPUT_FILE] [--qry-batch-size INTEGER]
 ```
+Updates HSN codes for products based on SKU mappings from a CSV file. The input file should contain two columns:
+- `SKU`: The SKU (Stock Keeping Unit) of the product variant
+- `HSN_Code`: The HSN code to assign to that SKU
 
-**File Output**
+#### Generate E-Invoices
+```bash
+uv run gst-shopify generate-e-invoice ORDER_IDS [--output-dir PATH]
+```
+Generates GST invoices for specified orders. `ORDER_IDS` should be a text file containing one order ID per line.
 
-- `unique_hsn_codes.csv`: Contains a list of unique HSN codes.
-- `bad_variants.csv`: Contains SKUs and their HSN code status if missing or invalid.
+### Configuration
 
-#### GST Invoice Generation (`e_invoice_exp_lut.py`)
-
-This script generates GST-compliant e-invoices for specified Shopify orders, saving each invoice in JSON format.
-
-**Usage**
-
-1. Prepare a text file (`order_ids.txt`) with a list of order IDs.
-2. Run:
-   ```bash
-   poetry run python e_invoice_exp_lut.py
-   ```
-
-Each order's JSON invoice file will be saved with the filename `gst_export_invoice_lut_<order_id>.json`.
-
-**Seller Details Configuration**
-
+#### Seller Details
 Seller details for the invoices are read from `config/seller_details.json`. Ensure this file is populated with the relevant business information.
 
 ### Error Handling and Retries
 
-All scripts include retry logic to handle Shopify API rate limits and temporary connection issues.
+All operations include retry logic to handle Shopify API rate limits and temporary connection issues.
+
+## Development
+
+For development, install the package with development dependencies:
+```bash
+uv pip install -e ".[dev]"
+```
+
+This will install additional tools like:
+- black (code formatting)
+- flake8 (linting)
+- isort (import sorting)
+- mypy (type checking)
+- pytest (testing)
 
 ## License
 
