@@ -1,6 +1,12 @@
 {% if prompt %}
 {{ prompt }}
 {% endif %}
+{% if project_notes %}
+{{ project_notes }}
+{% endif %}
+{% if user_notes %}
+{{ user_notes }}
+{% endif %}
 # Detailed Repository Content: **{{ project_name }}**
 
 This context presents a comprehensive view of the _/{{ project_name }}_ repository.
@@ -31,14 +37,6 @@ The human will then provide the requested file contents in the next message.
 ```
 {{ folder_structure_diagram }}
 ```
-
-{% if summary %}
-## Project Summary
-
-॥๛॥
-{{ summary }}
-॥๛॥
-{% endif %}
 
 {% if files %}
 ## Complete File Contents
