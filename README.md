@@ -32,7 +32,7 @@ Ensure that your Shopify app or private app is granted these permissions in the 
 
 1. Install directly from GitHub:
    ```bash
-   uv pip install git+https://github.com/restlessronin/gst-shopify.git
+   uv pip install git+https://github.com/aurovilledotcom/gst-shopify.git@release
    ```
 
 ### CLI Commands
