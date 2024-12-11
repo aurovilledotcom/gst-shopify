@@ -34,7 +34,9 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              price
+              presentmentPrices(first:1){{
+                amount
+              }}
               variant {{
                 barcode
                 inventoryItem {{
@@ -114,7 +116,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             else "00000000"
         )
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        unit_price = Decimal(
+            item.get("presentmentPrices", [{}])[0].get("amount", "0.00")
+        )
+
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
