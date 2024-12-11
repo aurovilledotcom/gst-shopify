@@ -10,45 +10,44 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query getOrder($orderId: ID!) {
-      order(id: $orderId) {
+    query = f"""
+    query {{
+      order(id: "gid://shopify/Order/{order_id}") {{
         name
         createdAt
-        totalShippingPriceSet {
-          shopMoney {
+        totalShippingPriceSet {{
+          shopMoney {{
             amount
-          }
-        }
-        customer {
+          }}
+        }}
+        customer {{
           firstName
           lastName
-        }
-        shippingAddress {
+        }}
+        shippingAddress {{
           address1
           address2
           city
-        }
-        lineItems(first: 250) {
-          edges {
-            node {
+        }}
+        lineItems(first: 250) {{
+          edges {{
+            node {{
               title
               quantity
               price
-              variant {
+              variant {{
                 barcode
-                inventoryItem {
+                inventoryItem {{
                   harmonizedSystemCode
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
     """
-    variables = {"orderId": f"gid://shopify/Order/{order_id}"}
-    response_data = graphql_request(query, variables=variables)
+    response_data = graphql_request(query, max_retries=5)
     if response_data and "data" in response_data and response_data["data"]["order"]:
         return response_data["data"]["order"]
     else:
