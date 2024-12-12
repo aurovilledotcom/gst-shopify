@@ -39,18 +39,8 @@ def get_shopify_order(order_id):
           edges {
             node {
               name
-              quantity
-              sku
-              variant {
-                id
-              }
-              originalUnitPriceSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
-              }
               product {
+                title
                 id
                 variants(first: 1) {
                   edges {
@@ -61,6 +51,17 @@ def get_shopify_order(order_id):
                       }
                     }
                   }
+                }
+              }
+              quantity
+              sku
+              variant {
+                id
+              }
+              originalUnitPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
                 }
               }
             }
@@ -135,6 +136,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             .get("inventoryItem", {})
         )
         hsn_code = inventory_item_data.get("harmonizedSystemCode", "00000000")
+        product_name = item.get("product", {}).get("title", "")
 
         quantity = Decimal(item.get("quantity", 1))
         unit_price = Decimal(
@@ -148,7 +150,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(len(invoice_data["ItemList"]) + 1),
-                "PrdDesc": item.get("name", ""),
+                "PrdDesc": product_name,
                 "IsServc": "N",
                 "HsnCd": hsn_code,
                 "Barcde": "",
