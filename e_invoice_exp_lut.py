@@ -11,9 +11,10 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query getOrderDetails($id: ID!) {
-      order(id: $id) {
+    query = (
+        """
+    {
+      order(id: "gid://shopify/Order/%s") {
         name
         createdAt
         totalShippingPriceSet {
@@ -68,8 +69,9 @@ def get_shopify_order(order_id):
       }
     }
     """
-    variables = {"id": f"gid://shopify/Order/{order_id}"}
-    response = graphql_request(query, variables)
+        % order_id
+    )
+    response = graphql_request(query)
     return response["data"]["order"]
 
 
