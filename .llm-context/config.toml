@@ -76,7 +76,7 @@ outline_files = [
 ]
 
 [profiles.code.only-include]
-full_files = ["**/*"]
+full_files = ["src/**/*.py"]
 outline_files = ["**/*"]
 
 [profiles.code.settings]
