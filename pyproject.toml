@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-gst-shopify = "gst_shopify.cli:app"
+gen-invoice = "gst_shopify.cli:app"
 
 [build-system]
 requires = ["hatchling"]
