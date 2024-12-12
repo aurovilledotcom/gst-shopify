@@ -1,14 +1,17 @@
 # GST-Shopify
 
-The `gst-shopify` repository provides tools for managing GST compliance in Shopify stores, focusing on updating Harmonized System of Nomenclature (HSN) codes for inventory items and generating GST-compliant invoices.
+The `gst-shopify` package provides tools for GST compliance in Shopify stores. The main tool generates GST-compliant invoices, with additional development utilities for HSN code management.
 
 > **Note**: This project was developed in collaboration with o1-mini and GPT-4o, using [LLM Context](https://github.com/cyberchitta/llm-context.py). All code in the repository is human-curated (by me 😇, [@restlessronin](https://github.com/restlessronin)).
 
 ## Features
 
-1. **HSN Code Update**: Batch processes for updating HSN codes in Shopify inventory items based on SKU mappings from a CSV file.
-2. **HSN Code Querying**: Generates reports of unique and invalid HSN codes in inventory.
-3. **GST Invoice Generation**: Creates GST-compliant invoices for Shopify orders using seller and order details, with support for e-invoice requirements.
+### Main Tool
+- **GST Invoice Generation**: Creates GST-compliant invoices for Shopify orders using seller and order details, with support for e-invoice requirements.
+
+### Development Utilities
+- **HSN Code Update**: Batch processes for updating HSN codes in Shopify inventory items
+- **HSN Code Querying**: Generates reports of unique and invalid HSN codes in inventory
 
 ## Getting Started
 
@@ -23,10 +26,12 @@ The `gst-shopify` repository provides tools for managing GST compliance in Shopi
 To use this project, the following Shopify API permissions are necessary:
 
 - **Orders**: `read_orders`
-- **Products**: `read_products`, `write_products` (for updating HSN codes)
-- **Inventory**: `read_inventory`, `write_inventory` (for updating inventory HSN codes)
+- **Products**: `read_products`
+- **Inventory**: `read_inventory`
 
-Ensure that your Shopify app or private app is granted these permissions in the Shopify Admin settings.
+Additional permissions required for development utilities:
+- **Products**: `write_products` (for updating HSN codes)
+- **Inventory**: `write_inventory` (for updating inventory HSN codes)
 
 ### Installation
 
@@ -41,29 +46,15 @@ Ensure that your Shopify app or private app is granted these permissions in the 
 
    These variables can be stored in a `.env` file in the root directory for convenience.
 
-### CLI Commands
+### Usage
 
-The package installs a command-line tool `gst-shopify` with the following commands:
-
-#### Query HSN Codes
 ```bash
-uv run gst-shopify query-hsn [--output-file PATH]
+gen-invoice ORDER_IDS [-o OUTPUT_DIR]
 ```
-Generates a report of unique HSN codes in use. The report is saved to the specified output file (default: `unique_hsn_codes.csv`).
 
-#### Update HSN Codes
-```bash
-uv run gst-shopify update-hsn [INPUT_FILE] [--qry-batch-size INTEGER]
-```
-Updates HSN codes for products based on SKU mappings from a CSV file. The input file should contain two columns:
-- `SKU`: The SKU (Stock Keeping Unit) of the product variant
-- `HSN_Code`: The HSN code to assign to that SKU
-
-#### Generate E-Invoices
-```bash
-uv run gst-shopify generate-e-invoice ORDER_IDS [--output-dir PATH]
-```
-Generates GST invoices for specified orders. `ORDER_IDS` should be a text file containing one order ID per line.
+Generates GST invoices for specified orders. Parameters:
+- `ORDER_IDS`: Text file containing one order ID per line
+- `-o, --output`: Directory for generated invoices (default: "invoices")
 
 ### Configuration
 
@@ -87,6 +78,18 @@ This will install additional tools like:
 - isort (import sorting)
 - mypy (type checking)
 - pytest (testing)
+
+### Development Utilities
+
+When installed in development mode, additional functionality can be accessed by running the Python modules directly:
+
+```bash
+# Query HSN codes
+uv run python -m gst_shopify.hsn_query [--output-file PATH]
+
+# Update HSN codes
+uv run python -m gst_shopify.hsn_update [INPUT_FILE] [--qry-batch-size INTEGER]
+```
 
 ## License
 
