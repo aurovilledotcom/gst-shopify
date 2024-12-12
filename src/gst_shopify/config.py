@@ -9,6 +9,8 @@ def load_seller_details(
 ) -> Dict[str, Any]:
     """Load seller details from configuration file"""
     if not config_path.exists():
+        print(f"Working directory: {Path.cwd()}")
+        print(f"Attempted config path: {config_path.absolute()}")
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     with open(config_path) as f:
