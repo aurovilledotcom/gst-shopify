@@ -125,7 +125,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             "CesVal": Decimal("0.00"),
             "StCesVal": Decimal("0.00"),
             "Discount": Decimal("0.00"),
-            "OthChrg": shipping_amount,
+            "OthChrg": Decimal("0.00"),
             "RndOffAmt": Decimal("0.00"),
             "TotInvVal": Decimal("0.00"),
         },
@@ -183,6 +183,35 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         invoice_data["ValDtls"]["Discount"] += discount_amount
         valid_item_count += 1
 
+    if shipping_amount > Decimal("0.00"):
+        shipping_line_item = {
+            "SlNo": str(valid_item_count + 1),
+            "PrdDesc": "Shipping Charges",
+            "IsServc": "Y",  # Mark as service
+            "HsnCd": "996812",  # HSN code for courier services
+            "Barcde": "",
+            "Qty": Decimal("1.00"),
+            "FreeQty": Decimal("0.00"),
+            "Unit": "OTH",  # Other unit type for services
+            "UnitPrice": shipping_amount,
+            "TotAmt": shipping_amount,
+            "Discount": Decimal("0.00"),
+            "PreTaxVal": shipping_amount,
+            "AssAmt": shipping_amount,
+            "GstRt": Decimal("0.00"),
+            "IgstAmt": Decimal("0.00"),
+            "CgstAmt": Decimal("0.00"),
+            "SgstAmt": Decimal("0.00"),
+            "CesRt": Decimal("0.00"),
+            "CesAmt": Decimal("0.00"),
+            "CesNonAdvlAmt": Decimal("0.00"),
+            "StateCesRt": Decimal("0.00"),
+            "StateCesAmt": Decimal("0.00"),
+            "StateCesNonAdvlAmt": Decimal("0.00"),
+            "OthChrg": Decimal("0.00"),
+            "TotItemVal": shipping_amount,
+        }
+    invoice_data["ItemList"].append(shipping_line_item)
     invoice_data["ValDtls"]["OthChrg"] = shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] += shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
