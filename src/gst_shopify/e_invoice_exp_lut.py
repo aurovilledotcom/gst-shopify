@@ -48,6 +48,35 @@ def get_hsn_code(inventory_item_id):
     return response.json()["inventory_item"].get("harmonized_system_code", "00000000")
 
 
+def validate_order_total(shopify_order, calculated_line_items_total):
+    """
+    Validate calculated line items total against Shopify order subtotal,
+    excluding shipping since it's calculated from the same field.
+    Returns tuple of (is_valid, explanation)
+    """
+    subtotal_price = Decimal(shopify_order.get("subtotal_price", "0.00"))
+    total_discounts = Decimal(shopify_order.get("total_discounts", "0.00"))
+
+    # Expected total is subtotal minus discounts
+    expected_total = subtotal_price - total_discounts
+
+    # Compare with small tolerance for rounding
+    tolerance = Decimal("0.01")
+    if abs(calculated_line_items_total - expected_total) <= tolerance:
+        return True, "Line items total matches Shopify subtotal"
+
+    discrepancy_report = (
+        f"\nLine Items Total Validation Failed:\n"
+        f"Calculated line items total: {calculated_line_items_total}\n"
+        f"Expected total (subtotal - discounts): {expected_total}\n"
+        f"Shopify subtotal: {subtotal_price}\n"
+        f"Shopify discounts: {total_discounts}\n"
+        f"Difference: {abs(calculated_line_items_total - expected_total)}"
+    )
+
+    return False, discrepancy_report
+
+
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
         shopify_order.get("total_shipping_price_set", {})
@@ -108,13 +137,18 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
         quantity = Decimal(str(item["quantity"]))
         unit_price = Decimal(str(item["price"]))
-        total_amount = (unit_price * quantity).quantize(
+        discount_amount = Decimal(str(item.get("total_discount", "0.00")))
+        total_before_discount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
+        total_amount = (total_before_discount - discount_amount).quantize(
+            Decimal("0.00"), rounding=ROUND_HALF_UP
+        )
+
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(valid_item_count + 1),
-                "PrdDesc": item["title"],  # Required field
+                "PrdDesc": item["title"],
                 "IsServc": "N",
                 "HsnCd": hsn_code,
                 "Barcde": item.get("barcode", ""),
@@ -122,9 +156,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
                 "UnitPrice": unit_price,
-                "TotAmt": total_amount,
-                "Discount": Decimal("0.00"),
-                "PreTaxVal": total_amount,
+                "TotAmt": total_before_discount,  # Amount before discount
+                "Discount": discount_amount,  # Item level discount
+                "PreTaxVal": total_amount,  # Amount after discount
                 "AssAmt": total_amount,
                 "GstRt": Decimal("0.00"),
                 "IgstAmt": Decimal("0.00"),
@@ -142,8 +176,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
         invoice_data["ValDtls"]["AssVal"] += total_amount
         invoice_data["ValDtls"]["TotInvVal"] += total_amount
+        invoice_data["ValDtls"]["Discount"] += discount_amount
         valid_item_count += 1
 
+    invoice_data["ValDtls"]["OthChrg"] = shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] += shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
         "TotInvVal"
@@ -175,11 +211,8 @@ def get_order_ids_from_names(
 ) -> dict[str, str]:
     """Look up multiple Shopify order IDs using order names in batches.
     Returns a dictionary mapping order names to their IDs."""
-
     name_to_id = {}
     orders_not_found = set(order_names)
-
-    # Process in batches
     for i in range(0, len(order_names), batch_size):
         batch = order_names[i : i + batch_size]
         query_str = " OR ".join(f"name:{name}" for name in batch)
@@ -196,9 +229,7 @@ def get_order_ids_from_names(
             }}
         }}
         """
-
         response = graphql_request(query)
-
         try:
             orders = response["data"]["orders"]["edges"]
             for order in orders:
@@ -208,11 +239,8 @@ def get_order_ids_from_names(
                 orders_not_found.discard(name)  # Remove from not found set
         except (KeyError, IndexError) as e:
             raise ValueError(f"Error processing orders response: {e}")
-
-    # Check if any orders were not found after all batches
     if orders_not_found:
         raise ValueError(f"Orders not found: {', '.join(orders_not_found)}")
-
     return name_to_id
 
 
