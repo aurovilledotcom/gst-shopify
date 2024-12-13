@@ -49,22 +49,12 @@ def get_hsn_code(inventory_item_id):
 
 
 def validate_order_total(shopify_order, calculated_line_items_total):
-    """
-    Validate calculated line items total against Shopify order subtotal,
-    excluding shipping since it's calculated from the same field.
-    Returns tuple of (is_valid, explanation)
-    """
     subtotal_price = Decimal(shopify_order.get("subtotal_price", "0.00"))
     total_discounts = Decimal(shopify_order.get("total_discounts", "0.00"))
-
-    # Expected total is subtotal minus discounts
     expected_total = subtotal_price - total_discounts
-
-    # Compare with small tolerance for rounding
     tolerance = Decimal("0.01")
     if abs(calculated_line_items_total - expected_total) <= tolerance:
         return True, "Line items total matches Shopify subtotal"
-
     discrepancy_report = (
         f"\nLine Items Total Validation Failed:\n"
         f"Calculated line items total: {calculated_line_items_total}\n"
@@ -73,8 +63,22 @@ def validate_order_total(shopify_order, calculated_line_items_total):
         f"Shopify discounts: {total_discounts}\n"
         f"Difference: {abs(calculated_line_items_total - expected_total)}"
     )
-
     return False, discrepancy_report
+
+
+def get_latest_fulfillment_date(shopify_order):
+    """Get the latest fulfillment date from fulfilled line items"""
+    latest_date = None
+    for item in shopify_order.get("fulfillments", []):
+        fulfillment_date = parser.parse(item.get("created_at"))
+        if latest_date is None or fulfillment_date > latest_date:
+            latest_date = fulfillment_date
+    if latest_date is None:
+        latest_date = parser.parse(shopify_order["created_at"])
+        print(
+            f"Warning: No fulfillment date found for order {shopify_order['name']}, using order date"
+        )
+    return latest_date.strftime("%d/%m/%Y")
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
@@ -95,7 +99,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "DocDtls": {
             "Typ": "INV",
             "No": str(shopify_order["name"]),
-            "Dt": parser.parse(shopify_order["created_at"]).strftime("%d/%m/%Y"),
+            "Dt": get_latest_fulfillment_date(shopify_order),
         },
         "SellerDtls": seller_details,
         "BuyerDtls": {
