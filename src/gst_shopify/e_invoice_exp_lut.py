@@ -191,9 +191,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     return invoice_data
 
 
-def save_invoice_to_json(out_dir: Path, invoice_data, order_id):
+def save_invoice_to_json(out_dir: Path, invoice_data, name):
     out_dir.mkdir(parents=True, exist_ok=True)
-    file_name = out_dir / f"gst_export_invoice_lut_{order_id}.json"
+    file_name = out_dir / f"exp_invoice_{name}.json"
     with open(file_name, "w") as json_file:
         json.dump(invoice_data, json_file, indent=4, default=str)
     print(f"GST export e-invoice (LUT) saved as {file_name}")
@@ -202,8 +202,7 @@ def save_invoice_to_json(out_dir: Path, invoice_data, order_id):
 def create_e_invoice_lut(out_dir: Path, order_id):
     seller_details = load_seller_details()
     shopify_order = get_shopify_order(order_id)
-    invoice_data = generate_gst_invoice_data(shopify_order, seller_details)
-    save_invoice_to_json(out_dir, invoice_data, order_id)
+    return generate_gst_invoice_data(shopify_order, seller_details)
 
 
 def get_order_ids_from_names(
@@ -261,7 +260,8 @@ def generate_invoices(input_file: Path, out_dir: Path):
             for name, order_id in name_to_id.items():
                 print(f"Processing order {name}")
                 try:
-                    create_e_invoice_lut(out_dir, order_id)
+                    invoice = create_e_invoice_lut(out_dir, order_id)
+                    save_invoice_to_json(out_dir, invoice, name)
                 except Exception as e:
                     print(f"Error generating invoice for order {name}: {e}")
                     continue
