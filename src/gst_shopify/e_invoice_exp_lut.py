@@ -6,10 +6,13 @@ from pathlib import Path
 import requests
 from dateutil import parser
 
+from gst_shopify.api_client import graphql_request
 from gst_shopify.config import load_seller_details
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
+
+QUERY_BATCH_SIZE = 250
 
 
 def get_shopify_order(order_id):
@@ -95,20 +98,23 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
+    valid_item_count = 0
     for idx, item in enumerate(shopify_order["line_items"]):
+        if item.get("fulfillment_status") != "fulfilled":
+            print(f"Skipping item {item.get('name')} - not fulfilled")
+            continue
         variant_id = item.get("variant_id")
         inventory_item_id = get_inventory_item_id(variant_id) if variant_id else None
         hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
-
-        quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        quantity = Decimal(str(item["quantity"]))
+        unit_price = Decimal(str(item["price"]))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
         invoice_data["ItemList"].append(
             {
-                "SlNo": str(idx + 1),
-                "PrdDesc": item.get("title", ""),
+                "SlNo": str(valid_item_count + 1),
+                "PrdDesc": item["title"],  # Required field
                 "IsServc": "N",
                 "HsnCd": hsn_code,
                 "Barcde": item.get("barcode", ""),
@@ -131,20 +137,21 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "StateCesAmt": Decimal("0.00"),
                 "StateCesNonAdvlAmt": Decimal("0.00"),
                 "OthChrg": Decimal("0.00"),
-                "TotItemVal": total_amount.quantize(
-                    Decimal("0.00"), rounding=ROUND_HALF_UP
-                ),
-                "AttribDtls": [],
+                "TotItemVal": total_amount,
             }
         )
         invoice_data["ValDtls"]["AssVal"] += total_amount
         invoice_data["ValDtls"]["TotInvVal"] += total_amount
+        valid_item_count += 1
 
     invoice_data["ValDtls"]["TotInvVal"] += shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
         "TotInvVal"
     ].quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
-
+    if not invoice_data["ItemList"]:
+        raise ValueError(
+            f"Order {shopify_order['name']} has no valid items for invoice generation"
+        )
     return invoice_data
 
 
@@ -163,22 +170,79 @@ def create_e_invoice_lut(out_dir: Path, order_id):
     save_invoice_to_json(out_dir, invoice_data, order_id)
 
 
-def generate_invoices(input_file: Path, out_dir: Path):
-    try:
-        with open(input_file, "r") as file:
-            order_ids = [line.strip() for line in file if line.strip()]
+def get_order_ids_from_names(
+    order_names: list[str], batch_size: int = QUERY_BATCH_SIZE
+) -> dict[str, str]:
+    """Look up multiple Shopify order IDs using order names in batches.
+    Returns a dictionary mapping order names to their IDs."""
 
-        for order_id in order_ids:
-            print(f"Processing order ID: {order_id}")
-            try:
-                create_e_invoice_lut(out_dir, order_id)
-            except FileNotFoundError as e:
-                print(f"Configuration error: {e}")
-                return
-            except Exception as e:
-                print(f"Error processing order {order_id}: {e}")
-                raise
-        print("All invoices generated successfully.")
+    name_to_id = {}
+    orders_not_found = set(order_names)
+
+    # Process in batches
+    for i in range(0, len(order_names), batch_size):
+        batch = order_names[i : i + batch_size]
+        query_str = " OR ".join(f"name:{name}" for name in batch)
+
+        query = f"""
+        {{
+            orders(first: {batch_size}, query: "{query_str}") {{
+                edges {{
+                    node {{
+                        id
+                        name
+                    }}
+                }}
+            }}
+        }}
+        """
+
+        response = graphql_request(query)
+
+        try:
+            orders = response["data"]["orders"]["edges"]
+            for order in orders:
+                name = order["node"]["name"]
+                order_id = order["node"]["id"].split("/")[-1]
+                name_to_id[name] = order_id
+                orders_not_found.discard(name)  # Remove from not found set
+        except (KeyError, IndexError) as e:
+            raise ValueError(f"Error processing orders response: {e}")
+
+    # Check if any orders were not found after all batches
+    if orders_not_found:
+        raise ValueError(f"Orders not found: {', '.join(orders_not_found)}")
+
+    return name_to_id
+
+
+def generate_invoices(input_file: Path, out_dir: Path):
+    """Generate invoices from a file containing order names"""
+    try:
+        # Read order names from file
+        with open(input_file, "r") as file:
+            order_names = [line.strip() for line in file if line.strip()]
+
+        print(f"Looking up IDs for {len(order_names)} orders...")
+
+        try:
+            # First get all order IDs
+            name_to_id = get_order_ids_from_names(order_names)
+
+            # Then generate invoices using existing functions
+            for name, order_id in name_to_id.items():
+                print(f"Processing order {name}")
+                try:
+                    create_e_invoice_lut(out_dir, order_id)
+                except Exception as e:
+                    print(f"Error generating invoice for order {name}: {e}")
+                    continue
+
+            print("All invoices generated successfully.")
+
+        except ValueError as e:
+            print(f"Error looking up orders: {e}")
+            return
 
     except FileNotFoundError:
         print(f"Input file '{input_file}' not found at {input_file.absolute()}")
