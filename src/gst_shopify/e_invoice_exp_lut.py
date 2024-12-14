@@ -111,7 +111,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             "Addr1": shopify_order.get("shipping_address", {}).get("address1", ""),
             "Addr2": shopify_order.get("shipping_address", {}).get("address2", ""),
             "Loc": shopify_order.get("shipping_address", {}).get("city", ""),
-            "Pin": "999999",
+            "Pin": 999999,
             "Stcd": "96",
             "Ph": None,
             "Em": None,
