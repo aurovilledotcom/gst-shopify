@@ -155,14 +155,13 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item["title"],
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
                 "UnitPrice": unit_price,
-                "TotAmt": total_before_discount,  # Amount before discount
-                "Discount": discount_amount,  # Item level discount
-                "PreTaxVal": total_amount,  # Amount after discount
+                "TotAmt": total_before_discount,
+                "Discount": discount_amount,
+                "PreTaxVal": total_amount,
                 "AssAmt": total_amount,
                 "GstRt": Decimal("0.00"),
                 "IgstAmt": Decimal("0.00"),
@@ -189,7 +188,6 @@ def generate_gst_invoice_data(shopify_order, seller_details):
             "PrdDesc": "Shipping Charges",
             "IsServc": "Y",
             "HsnCd": "996811",
-            "Barcde": "",
             "Qty": Decimal("1.00"),
             "FreeQty": Decimal("0.00"),
             "Unit": "OTH",
