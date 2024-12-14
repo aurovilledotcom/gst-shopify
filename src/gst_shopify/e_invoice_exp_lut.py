@@ -211,9 +211,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         }
     invoice_data["ItemList"].append(shipping_line_item)
     invoice_data["ValDtls"]["AssVal"] += shipping_amount
-    invoice_data["ValDtls"]["AssVal"] = invoice_data["ValDtls"][
-        "AssVal"
-    ].quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+    invoice_data["ValDtls"]["AssVal"] = invoice_data["ValDtls"]["AssVal"].quantize(
+        Decimal("0.00"), rounding=ROUND_HALF_UP
+    )
     invoice_data["ValDtls"]["TotInvVal"] += shipping_amount
     invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
         "TotInvVal"
@@ -226,7 +226,8 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
 
 def decimal_default(obj):
-    return int(obj.quantize(Decimal('0'), rounding=ROUND_HALF_UP))
+    return int(obj.quantize(Decimal("0"), rounding=ROUND_HALF_UP))
+
 
 def save_invoice_to_json(out_dir: Path, invoice_data, name):
     out_dir.mkdir(parents=True, exist_ok=True)
