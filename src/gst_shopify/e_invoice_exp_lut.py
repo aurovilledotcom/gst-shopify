@@ -228,7 +228,7 @@ def save_invoice_to_json(out_dir: Path, invoice_data, name):
     out_dir.mkdir(parents=True, exist_ok=True)
     file_name = out_dir / f"exp_invoice_{name}.json"
     with open(file_name, "w") as json_file:
-        json.dump(invoice_data, json_file, indent=4, default=str)
+        json.dump([invoice_data], json_file, indent=4, default=str)
     print(f"GST export e-invoice (LUT) saved as {file_name}")
 
 
