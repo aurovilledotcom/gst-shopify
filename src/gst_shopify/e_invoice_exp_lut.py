@@ -98,7 +98,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
         "DocDtls": {
             "Typ": "INV",
-            "No": str(shopify_order["name"]),
+            "No": str(shopify_order["name"]).replace("#", ""),
             "Dt": get_latest_fulfillment_date(shopify_order),
         },
         "SellerDtls": seller_details,
@@ -157,7 +157,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "HsnCd": hsn_code,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
-                "Unit": "PCS",
+                "Unit": "NOS",
                 "UnitPrice": unit_price,
                 "TotAmt": total_before_discount,
                 "Discount": discount_amount,
