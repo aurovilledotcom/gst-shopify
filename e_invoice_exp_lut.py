@@ -32,13 +32,17 @@ query {{
         node {{
           title
           quantity
-          price
-          barcode
           variant {{
             id
+            sku
             inventoryItem {{
               id
               harmonizedSystemCode
+            }}
+          }}
+          originalUnitPriceSet {{
+            shopMoney {{
+              amount
             }}
           }}
         }}
@@ -105,24 +109,28 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["line_items"]):
+    for idx, item in enumerate(shopify_order["lineItems"]["edges"]):
         node = item["node"]
         variant = node.get("variant", {})
         inventory_item = variant.get("inventoryItem", {})
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
 
         quantity = Decimal(node.get("quantity", 1))
-        unit_price = Decimal(node.get("price", "0.00"))
+        unit_price = Decimal(
+            node.get("originalUnitPriceSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0.00")
+        )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
         invoice_data["ItemList"].append(
             {
                 "SlNo": str(idx + 1),
-                "PrdDesc": item.get("title", ""),
+                "PrdDesc": node.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": variant.get("sku", ""),  # Using SKU instead of barcode
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
