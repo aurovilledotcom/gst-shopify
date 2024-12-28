@@ -8,50 +8,50 @@ from api_client import graphql_request
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
 
-ORDER_QUERY = """
-query ($id: ID!) {
-  order(id: $id) {
+ORDER_QUERY_TEMPLATE = """
+query {{
+  order(id: "gid://shopify/Order/{order_id}") {{
     name
     createdAt
-    totalShippingPriceSet {
-      shopMoney {
+    totalShippingPriceSet {{
+      shopMoney {{
         amount
-      }
-    }
-    customer {
+      }}
+    }}
+    customer {{
       firstName
       lastName
-    }
-    shippingAddress {
+    }}
+    shippingAddress {{
       address1
       address2
       city
-    }
-    lineItems(first: 100) {
-      edges {
-        node {
+    }}
+    lineItems(first: 100) {{
+      edges {{
+        node {{
           title
           quantity
           price
           barcode
-          variant {
+          variant {{
             id
-            inventoryItem {
+            inventoryItem {{
               id
               harmonizedSystemCode
-            }
-          }
-        }
-      }
-    }
-  }
-}
+            }}
+          }}
+        }}
+      }}
+    }}
+  }}
+}}
 """
 
 
 def get_shopify_order(order_id):
-    variables = {"id": f"gid://shopify/Order/{order_id}"}
-    response = graphql_request(ORDER_QUERY, variables)
+    query = ORDER_QUERY_TEMPLATE.format(order_id=order_id)
+    response = graphql_request(query)
     return response["data"]["order"]
 
 
