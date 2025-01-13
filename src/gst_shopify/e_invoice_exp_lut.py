@@ -87,7 +87,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         .get("shop_money", {})
         .get("amount", "0.00")
     )
-    total_discounts = Decimal(str(shopify_order.get("total_discounts", "0.00")))  # Get total discounts
+    total_discounts = Decimal(
+        str(shopify_order.get("total_discounts", "0.00"))
+    )  # Get total discounts
     invoice_data = {
         "Version": "1.1",
         "TranDtls": {
@@ -215,10 +217,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     invoice_data["ValDtls"]["AssVal"] = invoice_data["ValDtls"]["AssVal"].quantize(
         Decimal("0.00"), rounding=ROUND_HALF_UP
     )
-    invoice_data["ValDtls"]["TotInvVal"] += (shipping_amount - total_discounts)
-    invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"]["TotInvVal"].quantize(
-        Decimal("0.00"), rounding=ROUND_HALF_UP
-    )
+    invoice_data["ValDtls"]["TotInvVal"] += shipping_amount - total_discounts
+    invoice_data["ValDtls"]["TotInvVal"] = invoice_data["ValDtls"][
+        "TotInvVal"
+    ].quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
     if not invoice_data["ItemList"]:
         raise ValueError(
             f"Order {shopify_order['name']} has no valid items for invoice generation"
