@@ -23,61 +23,62 @@ DEFAULT_STCD = "33"
 
 
 def get_shopify_order(order_id):
-    query = """
-    query ($orderId: ID!) {
-        node(id: $orderId) {
-            ... on Order {
-                id
-                name
-                createdAt
-                totalShippingPriceSet {
-                    shopMoney {
-                        amount
-                        currencyCode
-                    }
+    query = (
+        """
+    query {
+        order(id: "gid://shopify/Order/%s") {
+            id
+            name
+            createdAt
+            totalShippingPriceSet {
+                shopMoney {
+                    amount
+                    currencyCode
                 }
-                customer {
-                    firstName
-                    lastName
-                }
-                shippingAddress {
-                    address1
-                    address2
-                    city
-                    province
-                    country
-                    zip
-                }
-                lineItems(first: 250) {
-                    edges {
-                        node {
+            }
+            customer {
+                firstName
+                lastName
+            }
+            shippingAddress {
+                address1
+                address2
+                city
+                province
+                country
+                zip
+            }
+            lineItems(first: 250) {
+                edges {
+                    node {
+                        id
+                        title
+                        quantity
+                        price
+                        variant {
                             id
-                            title
-                            quantity
-                            price
-                            variant {
+                            inventoryItem {
                                 id
-                                inventoryItem {
-                                    id
-                                    harmonizedSystemCode
-                                }
+                                harmonizedSystemCode
                             }
-                            barcode
                         }
+                        barcode
                     }
                 }
             }
         }
     }
     """
-    variables = {"orderId": f"gid://shopify/Order/{order_id}"}
+        % order_id
+    )
+
     try:
-        response = graphql_request(query, variables=variables)
-        node = response.get("data", {}).get("node", {})
-        if not node:
+        response = graphql_request(query, max_retries=5)
+        order_data = response.get("data", {}).get("order", {})
+        if not order_data:
             logging.error(f"Order with ID {order_id} not found.")
             return {}
-        return node
+        return order_data
     except Exception as e:
         logging.error(f"Error fetching order {order_id}: {e}")
         return {}
