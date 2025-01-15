@@ -54,7 +54,8 @@ def get_shopify_order(order_id):
                         id
                         title
                         quantity
-                        price
+                        originalPrice
+                        sku
                         variant {
                             id
                             inventoryItem {
@@ -62,7 +63,6 @@ def get_shopify_order(order_id):
                                 harmonizedSystemCode
                             }
                         }
-                        barcode
                     }
                 }
             }
