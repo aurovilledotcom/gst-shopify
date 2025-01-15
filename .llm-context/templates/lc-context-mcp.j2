@@ -9,18 +9,12 @@
 {% endif %}
 # Repository Content: **{{ project_name }}**
 
+> Generation timestamp: {{ context_timestamp }}  
+> Use lc-list-modified-files tool to track changes since generation
 {% if sample_requested_files %}
 ## File Access Instructions
 
-Missing/incomplete files (marked "✗" or "○" in the repository structure) can be retrieved using the get_files tool:
-- root_path: "{{ project_name }}"
-- paths: Array of paths prefixed with "/{{ project_name }}", e.g.:
-```json
-{
-  "root_path": "{{ project_name }}",
-  "paths": [{% for file in sample_requested_files %}"{{ file }}"{% if not loop.last %},{% endif %}{% endfor %}]
-}
-```
+Missing/incomplete files (marked "✗" or "○" in the repository structure) can be retrieved using the lc-get-files tool.
 {% endif %}
 
 ## Repository Structure
