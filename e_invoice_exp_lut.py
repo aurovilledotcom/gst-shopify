@@ -1,51 +1,92 @@
 import json
+import logging
 import os
+import time
 from decimal import ROUND_HALF_UP, Decimal
 
 import requests
 from dateutil import parser
 
+from api_client import graphql_request
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
+SELLER_DETAILS_FILE = "config/seller_details.json"
+DEFAULT_GSTIN = "33AAATA0037B11O"
+DEFAULT_POS = "96"
+DEFAULT_STCD = "33"
 
 
 def get_shopify_order(order_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/orders/{order_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
+    query = """
+    query ($orderId: ID!) {
+        node(id: $orderId) {
+            ... on Order {
+                id
+                name
+                createdAt
+                totalShippingPriceSet {
+                    shopMoney {
+                        amount
+                        currencyCode
+                    }
+                }
+                customer {
+                    firstName
+                    lastName
+                }
+                shippingAddress {
+                    address1
+                    address2
+                    city
+                    province
+                    country
+                    zip
+                }
+                lineItems(first: 250) {
+                    edges {
+                        node {
+                            id
+                            title
+                            quantity
+                            price
+                            variant {
+                                id
+                                inventoryItem {
+                                    id
+                                    harmonizedSystemCode
+                                }
+                            }
+                            barcode
+                        }
+                    }
+                }
+            }
+        }
     }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["order"]
-
-
-def get_inventory_item_id(variant_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/variants/{variant_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["variant"].get("inventory_item_id")
-
-
-def get_hsn_code(inventory_item_id):
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-10/inventory_items/{inventory_item_id}.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": API_TOKEN,
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["inventory_item"].get("harmonized_system_code", "00000000")
+    """
+    variables = {"orderId": f"gid://shopify/Order/{order_id}"}
+    try:
+        response = graphql_request(query, variables=variables)
+        node = response.get("data", {}).get("node", {})
+        if not node:
+            logging.error(f"Order with ID {order_id} not found.")
+            return {}
+        return node
+    except Exception as e:
+        logging.error(f"Error fetching order {order_id}: {e}")
+        return {}
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
     shipping_amount = Decimal(
-        shopify_order.get("total_shipping_price_set", {})
-        .get("shop_money", {})
+        shopify_order.get("totalShippingPriceSet", {})
+        .get("shopMoney", {})
         .get("amount", "0.00")
     )
     invoice_data = {
@@ -59,21 +100,19 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
         "DocDtls": {
             "Typ": "INV",
-            "No": str(shopify_order["name"]),
-            "Dt": parser.parse(shopify_order["created_at"]).strftime("%d/%m/%Y"),
+            "No": str(shopify_order.get("name", "")),
+            "Dt": parser.parse(shopify_order.get("createdAt", "")).strftime("%d/%m/%Y"),
         },
         "SellerDtls": seller_details,
         "BuyerDtls": {
             "Gstin": "URP",
-            "LglNm": shopify_order.get("customer", {}).get("first_name", "")
-            + " "
-            + shopify_order.get("customer", {}).get("last_name", ""),
-            "Pos": "96",
-            "Addr1": shopify_order.get("shipping_address", {}).get("address1", ""),
-            "Addr2": shopify_order.get("shipping_address", {}).get("address2", ""),
-            "Loc": shopify_order.get("shipping_address", {}).get("city", ""),
+            "LglNm": f"{shopify_order.get('customer', {}).get('firstName', '')} {shopify_order.get('customer', {}).get('lastName', '')}",
+            "Pos": DEFAULT_POS,
+            "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
+            "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
+            "Loc": shopify_order.get("shippingAddress", {}).get("city", ""),
             "Pin": "999999",
-            "Stcd": "96",
+            "Stcd": DEFAULT_STCD,
             "Ph": None,
             "Em": None,
         },
@@ -92,23 +131,24 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         },
     }
 
-    for idx, item in enumerate(shopify_order["line_items"]):
-        variant_id = item.get("variant_id")
-        inventory_item_id = get_inventory_item_id(variant_id) if variant_id else None
-        hsn_code = get_hsn_code(inventory_item_id) if inventory_item_id else "00000000"
-
-        quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+    for edge in shopify_order.get("lineItems", {}).get("edges", []):
+        node = edge.get("node", {})
+        variant = node.get("variant", {})
+        inventory_item = variant.get("inventoryItem", {})
+        hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
+        barcode = node.get("barcode", "")
+        quantity = Decimal(node.get("quantity", 1))
+        unit_price = Decimal(node.get("price", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
         invoice_data["ItemList"].append(
             {
-                "SlNo": str(idx + 1),
-                "PrdDesc": item.get("title", ""),
+                "SlNo": str(len(invoice_data["ItemList"]) + 1),
+                "PrdDesc": node.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": barcode,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
