@@ -54,10 +54,13 @@ def get_shopify_order(order_id):
                         id
                         title
                         quantity
-                        originalPrice
-                        sku
                         variant {
                             id
+                            price {
+                                amount
+                                currencyCode
+                            }
+                            sku
                             inventoryItem {
                                 id
                                 harmonizedSystemCode
@@ -85,11 +88,16 @@ def get_shopify_order(order_id):
 
 
 def generate_gst_invoice_data(shopify_order, seller_details):
-    shipping_amount = Decimal(
-        shopify_order.get("totalShippingPriceSet", {})
-        .get("shopMoney", {})
-        .get("amount", "0.00")
-    )
+    try:
+        shipping_amount = Decimal(
+            shopify_order.get("totalShippingPriceSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0.00")
+        )
+    except Exception as e:
+        logging.error(f"Error parsing shipping amount: {e}")
+        shipping_amount = Decimal("0.00")
+
     invoice_data = {
         "Version": "1.1",
         "TranDtls": {
@@ -108,12 +116,12 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         "BuyerDtls": {
             "Gstin": "URP",
             "LglNm": f"{shopify_order.get('customer', {}).get('firstName', '')} {shopify_order.get('customer', {}).get('lastName', '')}",
-            "Pos": DEFAULT_POS,
+            "Pos": "96",
             "Addr1": shopify_order.get("shippingAddress", {}).get("address1", ""),
             "Addr2": shopify_order.get("shippingAddress", {}).get("address2", ""),
             "Loc": shopify_order.get("shippingAddress", {}).get("city", ""),
             "Pin": "999999",
-            "Stcd": DEFAULT_STCD,
+            "Stcd": "96",
             "Ph": None,
             "Em": None,
         },
@@ -137,9 +145,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         variant = node.get("variant", {})
         inventory_item = variant.get("inventoryItem", {})
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
-        barcode = node.get("barcode", "")
+        sku = variant.get("sku", "")
         quantity = Decimal(node.get("quantity", 1))
-        unit_price = Decimal(node.get("price", "0.00"))
+        unit_price = Decimal(variant.get("price", {}).get("amount", "0.00"))
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -149,7 +157,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": node.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": barcode,
+                "Barcde": sku,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
@@ -170,7 +178,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "StateCesNonAdvlAmt": Decimal("0.00"),
                 "OthChrg": Decimal("0.00"),
                 "TotItemVal": total_amount.quantize(
-                    Decimal("0.00"), rounding=ROUND_HALF_UP
+                    Decimal("0.00"), rounding=ROUND_HALFEVEN
                 ),
                 "AttribDtls": [],
             }
