@@ -56,10 +56,7 @@ def get_shopify_order(order_id):
                         quantity
                         variant {
                             id
-                            price {
-                                amount
-                                currencyCode
-                            }
+                            price
                             sku
                             inventoryItem {
                                 id
@@ -147,8 +144,13 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
         sku = variant.get("sku", "")
         quantity = Decimal(node.get("quantity", 1))
-        unit_price = Decimal(variant.get("price", {}).get("amount", "0.00"))
-        total_amount = (unit_price * quantity).quantize(
+        price_str = variant.get("price", "0.00")
+        try:
+            price = Decimal(price_str)
+        except Exception as e:
+            logging.error(f"Error parsing price: {e}")
+            price = Decimal("0.00")
+        total_amount = (price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
         invoice_data["ItemList"].append(
@@ -161,7 +163,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
-                "UnitPrice": unit_price,
+                "UnitPrice": price,
                 "TotAmt": total_amount,
                 "Discount": Decimal("0.00"),
                 "PreTaxVal": total_amount,
@@ -178,7 +180,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "StateCesNonAdvlAmt": Decimal("0.00"),
                 "OthChrg": Decimal("0.00"),
                 "TotItemVal": total_amount.quantize(
-                    Decimal("0.00"), rounding=ROUND_HALFEVEN
+                    Decimal("0.00"), rounding=ROUND_HALF_UP
                 ),
                 "AttribDtls": [],
             }
