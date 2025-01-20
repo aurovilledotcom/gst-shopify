@@ -128,15 +128,24 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "Unit": "PCS",
                 "UnitPrice": unit_price,
                 "TotAmt": total_amount,
+                "Discount": Decimal("0.00"),
                 "PreTaxVal": total_amount,
                 "AssAmt": total_amount,
                 "GstRt": Decimal("0.00"),
                 "IgstAmt": Decimal("0.00"),
                 "CgstAmt": Decimal("0.00"),
                 "SgstAmt": Decimal("0.00"),
+                "CesRt": Decimal("0.00"),
+                "CesAmt": Decimal("0.00"),
+                "CesNonAdvlAmt": Decimal("0.00"),
+                "StateCesRt": Decimal("0.00"),
+                "StateCesAmt": Decimal("0.00"),
+                "StateCesNonAdvlAmt": Decimal("0.00"),
+                "OthChrg": Decimal("0.00"),
                 "TotItemVal": total_amount.quantize(
                     Decimal("0.00"), rounding=ROUND_HALF_UP
                 ),
+                "AttribDtls": [],  # Restored
             }
         )
         invoice_data["ValDtls"]["AssVal"] += total_amount
