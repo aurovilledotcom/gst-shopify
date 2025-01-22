@@ -11,44 +11,43 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query GetOrderDetails($orderId: ID!) {
-      order(id: $orderId) {
+    query = f"""
+    query GetOrderDetails {{
+      order(id: "{order_id}") {{
         name
         createdAt
-        shippingAddress {
+        shippingAddress {{
           address1
           address2
           city
-        }
-        customer {
+        }}
+        customer {{
           firstName
           lastName
-        }
-        totalShippingPriceSet {
-          shopMoney {
+        }}
+        totalShippingPriceSet {{
+          shopMoney {{
             amount
-          }
-        }
-        lineItems(first: 250) {
-          nodes {
+          }}
+        }}
+        lineItems(first: 250) {{
+          nodes {{
             title
             quantity
             price
-            variant {
+            variant {{
               id
-              inventoryItem {
+              inventoryItem {{
                 harmonizedSystemCode
-              }
-            }
+              }}
+            }}
             barcode
-          }
-        }
-      }
-    }
+          }}
+        }}
+      }}
+    }}
     """
-    variables = {"orderId": order_id}
-    response_data = graphql_request(query, variables=variables)
+    response_data = graphql_request(query)
 
     if response_data and "data" in response_data and response_data["data"]["order"]:
         return response_data["data"]["order"]
