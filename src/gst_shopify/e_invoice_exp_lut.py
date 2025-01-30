@@ -230,7 +230,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
 
 def decimal_default(obj):
     if isinstance(obj, Decimal):
-        return str(obj.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))
+        val = obj.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+        if val == val.to_integral_value():
+            return int(val)
+        return float(val)
     return str(obj)
 
 
