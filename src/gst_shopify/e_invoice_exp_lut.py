@@ -233,6 +233,7 @@ def decimal_default(obj):
         return str(obj.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))
     return str(obj)
 
+
 def save_invoice_to_json(out_dir: Path, invoice_data, name):
     out_dir.mkdir(parents=True, exist_ok=True)
     file_name = out_dir / f"exp_invoice_{name}.json"
