@@ -13,44 +13,43 @@ API_TOKEN = os.getenv("API_TOKEN")
 def get_shopify_order(order_id):
     # Convert the order_id to Shopify’s global ID format.
     order_gid = f"gid://shopify/Order/{order_id}"
-    query = """
-    query getOrder($orderId: ID!) {
-      order(id: $orderId) {
+    query = f"""
+    query getOrder {{
+      order(id: "{order_gid}") {{
         name
         createdAt
-        totalShippingPriceSet {
-          shopMoney {
+        totalShippingPriceSet {{
+          shopMoney {{
             amount
-          }
-        }
-        customer {
+          }}
+        }}
+        customer {{
           firstName
           lastName
-        }
-        shippingAddress {
+        }}
+        shippingAddress {{
           address1
           address2
           city
-        }
-        lineItems(first: 50) {
-          edges {
-            node {
+        }}
+        lineItems(first: 50) {{
+          edges {{
+            node {{
               title
               quantity
-              variant {
+              variant {{
                 price
                 barcode
-                inventoryItem {
+                inventoryItem {{
                   harmonizedSystemCode
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
     """
-    variables = {"orderId": order_gid}
     response_data = graphql_request(query, max_retries=5)
     order = response_data.get("data", {}).get("order")
     if not order:
