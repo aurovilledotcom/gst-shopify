@@ -37,13 +37,12 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              currentUnitPriceSet {{
+              originalUnitPriceSet {{
                 shopMoney {{
                   amount
                 }}
               }}
               variant {{
-                id
                 barcode
                 inventoryItem {{
                   harmonizedSystemCode
@@ -116,7 +115,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
     for idx, edge in enumerate(shopify_order.get("lineItems", {}).get("edges", [])):
         item = edge.get("node", {})
         unit_price = Decimal(
-            item.get("currentUnitPriceSet", {})
+            item.get("originalUnitPriceSet", {})
             .get("shopMoney", {})
             .get("amount", "0.00")
         )
