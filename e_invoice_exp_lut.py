@@ -34,10 +34,14 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              price
-              barcode
+              priceSet {{
+                shopMoney {{
+                  amount
+                }}
+              }}
               variant {{
                 id
+                barcode
                 inventoryItem {{
                   harmonizedSystemCode
                 }}
@@ -49,6 +53,10 @@ def get_shopify_order(order_id):
     }}
     """
     response = graphql_request(query, max_retries=3)
+    if "errors" in response:
+        raise Exception(f"GraphQL errors: {response['errors']}")
+    if "data" not in response or not response["data"]:
+        raise Exception("No data returned from GraphQL query")
     return response["data"]["order"]
 
 
@@ -113,7 +121,9 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         )
 
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        unit_price = Decimal(
+            item.get("priceSet", {}).get("shopMoney", {}).get("amount", "0.00")
+        )
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -124,7 +134,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": item.get("variant", {}).get("barcode", ""),
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
