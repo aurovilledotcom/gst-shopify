@@ -35,9 +35,13 @@ def get_shopify_order(order_id):
             node {{
               title
               quantity
-              price
-              barcode
+              discountedUnitPriceSet {{
+                shopMoney {{
+                  amount
+                }}
+              }}
               variant {{
+                barcode
                 inventoryItem {{
                   harmonizedSystemCode
                 }}
@@ -108,9 +112,10 @@ def generate_gst_invoice_data(shopify_order, seller_details):
         variant = item.get("variant", {})
         inventory_item = variant.get("inventoryItem", {}) if variant else {}
         hsn_code = inventory_item.get("harmonizedSystemCode", "00000000")
+        barcode = variant.get("barcode", "")
 
         quantity = Decimal(item.get("quantity", 1))
-        unit_price = Decimal(item.get("price", "0.00"))
+        unit_price = Decimal(item["discountedUnitPriceSet"]["shopMoney"]["amount"])
         total_amount = (unit_price * quantity).quantize(
             Decimal("0.00"), rounding=ROUND_HALF_UP
         )
@@ -120,7 +125,7 @@ def generate_gst_invoice_data(shopify_order, seller_details):
                 "PrdDesc": item.get("title", ""),
                 "IsServc": "N",
                 "HsnCd": hsn_code,
-                "Barcde": item.get("barcode", ""),
+                "Barcde": barcode,
                 "Qty": quantity,
                 "FreeQty": Decimal("0.00"),
                 "Unit": "PCS",
