@@ -6,8 +6,8 @@ from pathlib import Path
 import requests
 from dateutil import parser
 
-from gst_shopify.api_client import graphql_request
 from gst_shopify.config import load_seller_details
+from gst_shopify.orders import get_order_ids_from_names
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 API_TOKEN = os.getenv("API_TOKEN")
@@ -249,44 +249,6 @@ def create_e_invoice_lut(out_dir: Path, order_id):
     seller_details = load_seller_details()
     shopify_order = get_shopify_order(order_id)
     return generate_gst_invoice_data(shopify_order, seller_details)
-
-
-def get_order_ids_from_names(
-    order_names: list[str], batch_size: int = QUERY_BATCH_SIZE
-) -> dict[str, str]:
-    """Look up multiple Shopify order IDs using order names in batches.
-    Returns a dictionary mapping order names to their IDs."""
-    name_to_id = {}
-    orders_not_found = set(order_names)
-    for i in range(0, len(order_names), batch_size):
-        batch = order_names[i : i + batch_size]
-        query_str = " OR ".join(f"name:{name}" for name in batch)
-
-        query = f"""
-        {{
-            orders(first: {batch_size}, query: "{query_str}") {{
-                edges {{
-                    node {{
-                        id
-                        name
-                    }}
-                }}
-            }}
-        }}
-        """
-        response = graphql_request(query)
-        try:
-            orders = response["data"]["orders"]["edges"]
-            for order in orders:
-                name = order["node"]["name"]
-                order_id = order["node"]["id"].split("/")[-1]
-                name_to_id[name] = order_id
-                orders_not_found.discard(name)  # Remove from not found set
-        except (KeyError, IndexError) as e:
-            raise ValueError(f"Error processing orders response: {e}")
-    if orders_not_found:
-        raise ValueError(f"Orders not found: {', '.join(orders_not_found)}")
-    return name_to_id
 
 
 def generate_invoices(input_file: Path, out_dir: Path):
