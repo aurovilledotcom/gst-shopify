@@ -10,47 +10,53 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 
 def get_shopify_order(order_id):
-    query = """
-    query ($id: ID!) {
-        order(id: $id) {
+    query = f"""
+    {{
+        order(id: "gid://shopify/Order/{order_id}") {{
             name
             createdAt
-            customer {
+            customer {{
                 firstName
                 lastName
-            }
-            shippingAddress {
+            }}
+            shippingAddress {{
                 address1
                 address2
                 city
-            }
-            totalShippingPriceSet {
-                shopMoney {
+            }}
+            totalShippingPriceSet {{
+                shopMoney {{
                     amount
-                }
-            }
-            lineItems(first: 250) {
-                edges {
-                    node {
+                }}
+            }}
+            lineItems(first: 250) {{
+                edges {{
+                    node {{
                         title
                         quantity
-                        price
-                        barcode
-                        variant {
+                        originalUnitPriceSet {{
+                            shopMoney {{
+                                amount
+                            }}
+                        }}
+                        variant {{
+                            barcode
                             id
-                            inventoryItem {
+                            inventoryItem {{
                                 id
                                 harmonizedSystemCode
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }}
     """
-    variables = {"id": f"gid://shopify/Order/{order_id}"}
-    result = graphql_request(query, variables)
+    result = graphql_request(query)
+    if "errors" in result:
+        raise Exception(f"GraphQL errors: {result['errors']}")
+
     order = result.get("data", {}).get("order", {})
 
     processed_order = {
@@ -76,8 +82,15 @@ def get_shopify_order(order_id):
             {
                 "title": item.get("node", {}).get("title"),
                 "quantity": item.get("node", {}).get("quantity"),
-                "price": item.get("node", {}).get("price"),
-                "barcode": item.get("node", {}).get("barcode"),
+                "price": item.get("node", {})
+                .get("originalUnitPriceSet", {})
+                .get("shopMoney", {})
+                .get("amount", "0.00"),
+                "barcode": (
+                    item.get("node", {}).get("variant", {}).get("barcode")
+                    if item.get("node", {}).get("variant")
+                    else ""
+                ),
                 "variant_id": (
                     item.get("node", {}).get("variant", {}).get("id").split("/")[-1]
                     if item.get("node", {}).get("variant")
